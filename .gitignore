@@ -1,0 +1,8 @@
+*.so
+*.o
+.settings
+.cproject
+.project
+*.pdf
+*.ttf
+*.tar.bz2
