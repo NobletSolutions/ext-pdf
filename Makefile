@@ -85,7 +85,7 @@ LINKER				=	g++
 #	with a list of all flags that should be passed to the linker.
 #
 
-COMPILER_FLAGS		=	-Wall -c -O2 -std=c++11 -I/usr/include/poppler/cpp -fpic -o
+COMPILER_FLAGS		=	-Wall -c -O2 -std=c++11 -I/usr/include/poppler/cpp -fpic
 LINKER_FLAGS		=	-shared
 LINKER_DEPENDENCIES	=	-lphpcpp -lPDFWriter -lpoppler-cpp
 
@@ -113,6 +113,12 @@ MKDIR				=	mkdir -p
 SOURCES				=	$(wildcard *.cpp)
 OBJECTS				=	$(SOURCES:%.cpp=%.o)
 
+DEPDIR := .d
+$(shell mkdir -p $(DEPDIR) >/dev/null)
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+
+POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
 #
 #	From here the build instructions start
@@ -123,8 +129,9 @@ all:					${OBJECTS} ${EXTENSION}
 ${EXTENSION}:			${OBJECTS}
 						${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}
 
-${OBJECTS}:
-						${COMPILER} ${COMPILER_FLAGS} $@ ${@:%.o=%.cpp}
+%.o: %.cpp $(DEPDIR)/%.d
+						$(COMPILE.cpp) $<
+						$(POSTCOMPILE)
 
 install:		
 						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
@@ -135,3 +142,9 @@ clean:
 
 dist: clean
 	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ./php-${NAME}-${VERSION}.tar.bz2 .
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS))))
+
