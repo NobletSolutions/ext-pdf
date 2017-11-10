@@ -27,8 +27,8 @@ mkdir -p %{buildroot}/etc/php.d
 %make_install
 
 %files
-%{_libdir}/php/modules/pdf-writer.so
-%{_sysconfdir}/php.d/pdf-writer.ini
+%{_libdir}/php/modules/pdf.so
+%{_sysconfdir}/php.d/60-pdf.ini
 
 %changelog
 

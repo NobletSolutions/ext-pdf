@@ -52,7 +52,7 @@ EXTENSION_DIR		=	$(shell php-config --extension-dir)
 #
 
 EXTENSION 			=	${NAME}.so
-INI 				=	${NAME}.ini
+INI 				=	60-${NAME}.ini
 
 
 #
