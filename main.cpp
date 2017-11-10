@@ -1,5 +1,7 @@
 #include <phpcpp.h>
 #include <iostream>
+#include "pdf-poppler.h"
+#include "pdf-writer.h"
 
 /**
  *  tell the compiler that the get_module is a pure C function
