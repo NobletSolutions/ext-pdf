@@ -66,7 +66,11 @@ PdfImageFormat::PdfImageFormat(const char * inFormat, const char * inExt) {
     }
 
 
-PdfDocument::PdfDocument() = default;
+PdfDocument::PdfDocument() {
+    jpeg = new PdfImageFormat("jpeg","jpg");
+    png = new PdfImageFormat("png","png");
+    tiff = new PdfImageFormat("tiff","tif");
+}
 
     void PdfDocument::__construct(Php::Parameters &params)
     {
