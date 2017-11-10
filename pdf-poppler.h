@@ -18,7 +18,7 @@
 #include <poppler-global.h>
 #include <poppler-page-renderer.h>
 
-class PdfImageResult : public Php::Base {
+class PdfImageResult: public Php::Base {
 private:
     int imageWidth;
     int imageHeight;
@@ -26,7 +26,8 @@ private:
     int pageHeight;
     std::vector<std::string> pages;
 public:
-    PdfImageResult(int inImageWidth, int inImageHeight, int inPageWidth, int inPageHeight, std::vector<std::string> inPages);
+    PdfImageResult(int inImageWidth, int inImageHeight, int inPageWidth,
+            int inPageHeight, std::vector<std::string> inPages);
     void __construct();
     Php::Value getImageWidth();
     Php::Value getImageHeight();
@@ -46,15 +47,15 @@ public:
     const char * getExtension();
 };
 
-class PdfDocument : public Php::Base {
-  private:
+class PdfDocument: public Php::Base {
+private:
     int _major;
     int _minor;
     poppler::document *_document;
     PdfImageFormat * jpeg;
     PdfImageFormat * png;
     PdfImageFormat * tiff;
-  public:
+public:
     PdfDocument();
     void __construct(Php::Parameters &params);
     Php::Value getMajorVersion();
@@ -67,7 +68,7 @@ class PdfDocument : public Php::Base {
     Php::Value asString();
     Php::Value toImage(Php::Parameters &params);
 
-  private:
+private:
     PdfImageFormat * getImageFormat(int inFormat);
 };
 
