@@ -13,16 +13,11 @@
 #include <PDFWriter/PDFPage.h>
 #include <PDFWriter/PDFObject.h>
 #include <PDFWriter/AbstractContentContext.h>
+#include "pdf-writer.h"
 
-class PdfText : public Php::Base {
-private:
-    Php::Value x;
-    Php::Value y;
-    Php::Value text;
-public:
-    PdfText() = default;
+PdfText::PdfText() = default;
 
-    void __construct(Php::Parameters &params)
+void PdfText::__construct(Php::Parameters &params)
     {
 //        Php::out << "x: " << params[0] << std::endl;
 //        Php::out << "y: " << params[1] << std::endl;
@@ -32,32 +27,21 @@ public:
         text = params[2];
     }
 
-    Php::Value getX() {
+    Php::Value PdfText::getX() {
         return x;
     }
 
-    Php::Value getY() {
+    Php::Value PdfText::getY() {
         return y;
     }
 
-    Php::Value getText() {
+    Php::Value PdfText::getText() {
         return text;
     }
-};
 
-class PdfWriter : public Php::Base {
-private:
-    PDFWriter writer;
-    PDFModifiedPage * modifiedPage = NULL;
-    PDFObject * page = NULL;
-    AbstractContentContext * contentContext = NULL;
-    AbstractContentContext::TextOptions * textOptions = NULL;
+PdfWriter::PdfWriter() = default;
 
-    int64_t pageNum = -1;
-public:
-    PdfWriter() = default;
-
-    void __construct(Php::Parameters &params)
+    void PdfWriter::__construct(Php::Parameters &params)
     {
 //        Php::out << "InputFile" << params[0] << std::endl;
 //        Php::out << "OutputFile" << params[1] << std::endl;
@@ -65,7 +49,7 @@ public:
         writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
     }
 
-    void writeTextToPage(Php::Parameters &params)
+    void PdfWriter::writeTextToPage(Php::Parameters &params)
     {
         if (params[0] < 0) {
 //            Php::out << "Page Is Negative!" << std::endl;
@@ -106,9 +90,8 @@ public:
         return;
     }
 
-    void writePdf()
+    void PdfWriter::writePdf()
     {
         writer.EndPDF();
     }
-};
 

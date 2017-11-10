@@ -14,16 +14,9 @@
 #include <poppler-rectangle.h>
 #include <poppler-global.h>
 #include <poppler-page-renderer.h>
+#include "pdf-poppler.h"
 
-class PdfImageResult : public Php::Base {
-private:
-    int imageWidth  =-1;
-    int imageHeight =-1;
-    int pageWidth   =-1;
-    int pageHeight  =-1;
-    std::vector<std::string> pages;
-public:
-    PdfImageResult(int inImageWidth, int inImageHeight, int inPageWidth, int inPageHeight, std::vector<std::string> inPages) {
+PdfImageResult::PdfImageResult(int inImageWidth, int inImageHeight, int inPageWidth, int inPageHeight, std::vector<std::string> inPages) {
         imageWidth = inImageWidth;
         imageHeight = inImageHeight;
         pageWidth = inPageWidth;
@@ -31,71 +24,56 @@ public:
         pages = inPages;
     }
 
-    void __construct() {}
+    void PdfImageResult::__construct() {}
 
-    Php::Value getImageWidth() {
+    Php::Value PdfImageResult::getImageWidth() {
         return imageWidth;
     }
 
-    Php::Value getImageHeight() {
+    Php::Value PdfImageResult::getImageHeight() {
         return imageHeight;
     }
 
-    Php::Value getPageWidth() {
+    Php::Value PdfImageResult::getPageWidth() {
         return pageWidth;
     }
 
-    Php::Value getPageHeight() {
+    Php::Value PdfImageResult::getPageHeight() {
         return pageHeight;
     }
 
-    Php::Value getNumberOfPages() {
+    Php::Value PdfImageResult::getNumberOfPages() {
         return (int)pages.size();
     }
 
-    Php::Value getPages() {
+    Php::Value PdfImageResult::getPages() {
         return pages;
     }
-};
 
-class PdfImageFormat {
-private:
-    char format[5];
-    char ext[4];
-public:
-    PdfImageFormat(const char * inFormat, const char * inExt) {
+PdfImageFormat::PdfImageFormat(const char * inFormat, const char * inExt) {
         memset(&format,0,5);
         memset(&ext,0,4);
         strncpy(&format[0],inFormat,4);
         strncpy(&ext[0],inExt,3);
     }
 
-    const char * getFormat() {
+    const char * PdfImageFormat::getFormat() {
         return &format[0];
     }
 
-    const char * getExtension() {
+    const char * PdfImageFormat::getExtension() {
         return &ext[0];
     }
-};
 
-class PdfDocument : public Php::Base {
-  private:
-    int _major = 0;
-    int _minor = 0;
-    poppler::document *_document = NULL;
-    PdfImageFormat * jpeg = new PdfImageFormat("jpeg","jpg");
-    PdfImageFormat * png = new PdfImageFormat("png","png");
-    PdfImageFormat * tiff = new PdfImageFormat("tiff","tif");
-  public:
-    PdfDocument() = default;
 
-    void __construct(Php::Parameters &params)
+PdfDocument::PdfDocument() = default;
+
+    void PdfDocument::__construct(Php::Parameters &params)
     {
        _document = poppler::document::load_from_file(params[0]);//,params[1],params[2]);
     }
 
-    Php::Value getMajorVersion()
+    Php::Value PdfDocument::getMajorVersion()
     {
         if(_major == 0) {
             _document->get_pdf_version(&_major, &_minor);
@@ -104,7 +82,7 @@ class PdfDocument : public Php::Base {
         return _major;
     }
 
-    Php::Value getMinorVersion()
+    Php::Value PdfDocument::getMinorVersion()
     {
         if(_major == 0) {
             _document->get_pdf_version(&_major, &_minor);
@@ -113,32 +91,32 @@ class PdfDocument : public Php::Base {
         return _minor;
     }
 
-    Php::Value hasEmbeddedFiles()
+    Php::Value PdfDocument::hasEmbeddedFiles()
     {
         return _document->has_embedded_files();
     }
 
-    Php::Value isEncrypted()
+    Php::Value PdfDocument::isEncrypted()
     {
         return _document->is_encrypted();
     }
 
-    Php::Value isLinear()
+    Php::Value PdfDocument::isLinear()
     {
         return _document->is_linearized();
     }
 
-    Php::Value isLocked()
+    Php::Value PdfDocument::isLocked()
     {
         return _document->is_locked();
     }
 
-    Php::Value numberOfPages()
+    Php::Value PdfDocument::numberOfPages()
     {
         return _document->pages();
     }
 
-    Php::Value asString()
+    Php::Value PdfDocument::asString()
     {
         int firstPage;
         int lastPage;
@@ -161,7 +139,7 @@ class PdfDocument : public Php::Base {
         return result;
     }
 
-    Php::Value toImage(Php::Parameters &params)
+    Php::Value PdfDocument::toImage(Php::Parameters &params)
     {
         int firstPage;
         int lastPage = _document->pages();
@@ -222,8 +200,7 @@ class PdfDocument : public Php::Base {
         return Php::Object("\\PDF\\PdfImageResult", obj);
     }
 
-  private:
-    PdfImageFormat * getImageFormat(int inFormat) {
+    PdfImageFormat * PdfDocument::getImageFormat(int inFormat) {
         switch(inFormat) {
             case 2:
                 return png;
@@ -237,5 +214,4 @@ class PdfDocument : public Php::Base {
 
         return NULL;
     }
-};
 
