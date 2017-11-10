@@ -55,7 +55,6 @@ class PdfDocument : public Php::Base {
     PdfImageFormat * png;
     PdfImageFormat * tiff;
   public:
-    PdfDocument();
     void __construct(Php::Parameters &params);
     Php::Value getMajorVersion();
     Php::Value getMinorVersion();

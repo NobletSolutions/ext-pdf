@@ -1,5 +1,5 @@
 /*
- * poppler.cc
+ * pdf-poppler.cpp
  *
  *  Created on: Oct 31, 2017
  *      Author: gnat
@@ -238,3 +238,4 @@ class PdfDocument : public Php::Base {
         return NULL;
     }
 };
+

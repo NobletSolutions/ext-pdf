@@ -1,13 +1,10 @@
-
 #include <phpcpp.h>
-#include "pdf-poppler.h"
-#include "pdf-writer.h"
+#include <iostream>
 
 /**
  *  tell the compiler that the get_module is a pure C function
  */
 extern "C" {
-    
     /**
      *  Function that is called by PHP right after the PHP process
      *  has started, and that returns an address of an internal PHP
@@ -19,7 +16,7 @@ extern "C" {
     {
         // static(!) Php::Extension object that should stay in memory
         // for the entire duration of the process (that's why it's static)
-        static Php::Extension extension("pdf-writer", "0.1");
+        static Php::Extension extension("pdf", "0.1");
 
         Php::Namespace myNamespace("PDF");
 
@@ -45,12 +42,7 @@ extern "C" {
                 Php::ByVal("modifications",Php::Type::Array)
         });
 
-
         pdfWriter.method<&PdfWriter::writePdf>("save");
-
-
-        // @todo    add your own functions, classes, namespaces to the extension
-        Php::Class<PdfDocument> pdfDocument("PdfDocument");
 
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");
         PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Private);
@@ -61,6 +53,7 @@ extern "C" {
         PdfImageResult.method<&PdfImageResult::getNumberOfPages>("getNumberOfPages");
         PdfImageResult.method<&PdfImageResult::getPages>("getPages");
 
+        Php::Class<PdfDocument> pdfDocument("PdfDocument");
         pdfDocument.add(Php::Constant("IMAGE_JPEG",1));
         pdfDocument.add(Php::Constant("IMAGE_PNG",2));
         pdfDocument.add(Php::Constant("IMAGE_TIFF",3));
@@ -72,7 +65,6 @@ extern "C" {
         });
         pdfDocument.method<&PdfDocument::getMajorVersion>("getMajorVersion");
         pdfDocument.method<&PdfDocument::getMinorVersion>("getMinorVersion");
-
         pdfDocument.method<&PdfDocument::hasEmbeddedFiles>("hasEmbeddedFiles");
         pdfDocument.method<&PdfDocument::isLocked>("isLocked");
         pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted");
@@ -95,3 +87,4 @@ extern "C" {
         return extension;
     }
 }
+

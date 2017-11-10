@@ -1,12 +1,13 @@
 /*
- * pdf.cc
+ * pdf-writer.cpp
  *
  *  Created on: Oct 31, 2017
  *      Author: gnat
  */
 
-#include <iostream>
 #include <phpcpp.h>
+#include <iostream>
+#include <string.h>
 #include <PDFWriter/PDFWriter.h>
 #include <PDFWriter/PDFModifiedPage.h>
 #include <PDFWriter/PDFPage.h>
@@ -110,3 +111,4 @@ public:
         writer.EndPDF();
     }
 };
+
