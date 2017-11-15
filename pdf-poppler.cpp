@@ -112,21 +112,23 @@ Php::Value PdfDocument::asString() {
     int lastPage;
     int x;
     poppler::page *page;
-    Php::Value result;
     poppler::ustring pageData;
     std::string resultData;
+    poppler::byte_array arr;
+    char *c_str;
 
-    firstPage = 1;
+    firstPage = 0;
     lastPage = _document->pages();
 
     for (x = firstPage; x < lastPage; x++) {
         page = _document->create_page(x);
-        pageData = page->text();
-        resultData.append(pageData.to_latin1());
+        pageData = page->text(page->page_rect(poppler::media_box));
+        arr = pageData.to_utf8();
+        c_str = &arr[0];
+        resultData.append(std::string(c_str, arr.size()));
     }
 
-    result = resultData;
-    return result;
+    return resultData;
 }
 
 Php::Value PdfDocument::toImage(Php::Parameters &params) {

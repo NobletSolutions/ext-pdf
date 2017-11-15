@@ -49,12 +49,12 @@ public:
 
 class PdfDocument: public Php::Base {
 private:
-    int _major;
-    int _minor;
-    poppler::document *_document;
-    PdfImageFormat * jpeg;
-    PdfImageFormat * png;
-    PdfImageFormat * tiff;
+    int _major = 0;
+    int _minor = 0;
+    poppler::document *_document = NULL;
+    PdfImageFormat * jpeg = NULL;
+    PdfImageFormat * png = NULL;
+    PdfImageFormat * tiff = NULL;
 public:
     PdfDocument();
     void __construct(Php::Parameters &params);
