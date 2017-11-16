@@ -18,7 +18,7 @@ extern "C" {
     {
         // static(!) Php::Extension object that should stay in memory
         // for the entire duration of the process (that's why it's static)
-        static Php::Extension extension("pdf", "0.2");
+        static Php::Extension extension("pdf", "0.4");
 
         Php::Namespace myNamespace("PDF");
 

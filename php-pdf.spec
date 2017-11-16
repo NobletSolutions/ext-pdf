@@ -1,5 +1,5 @@
 Name:       php-pdf
-Version:    0.3
+Version:    0.4
 Release:    1%{?dist}
 Summary:    PHP PDF Poppler/ PDFWriter Extension
 
@@ -9,7 +9,7 @@ URL:        https://github.com/NobletSolutions/ext-pdf-writer
 Source0:    %{name}-%{version}.tar.bz2
 
 BuildRequires: php-devel >= 7.1 php-cpp-devel pdf-writer-devel poppler-cpp-devel
-Requires: php-cpp poppler-cpp pdf-writer php >= 7.1
+Requires: php-cpp poppler-cpp pdf-writer php-common >= 7.1
 
 %description
 PHP PDF Poppler / PDFWriter extension
