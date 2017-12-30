@@ -24,13 +24,13 @@ make %{?_smp_mflags}
 %install
 mkdir -p %{buildroot}`/usr/bin/php-config --extension-dir`
 mkdir -p %{buildroot}/etc/php.d
-#mkdir -p %{buildroot}/php-pdf/fonts
+mkdir -p %{buildroot}/%{_datadir}/php-pdf/fonts
 %make_install
 
 %files
 %{_libdir}/php/modules/pdf.so
 %{_sysconfdir}/php.d/60-pdf.ini
-#%{_font}/php-pdf/fonts/*
+%{_datadir}/php-pdf/fonts/*
 
 %changelog
 

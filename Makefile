@@ -136,6 +136,7 @@ ${EXTENSION}:			${OBJECTS}
 install:		
 						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
 						${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
+						${MKDIR} $(DESTDIR)/${FONT_DIR}/
 						${CP} fonts/* $(DESTDIR)/${FONT_DIR}/
 				
 clean:
