@@ -8,6 +8,8 @@
 #include <phpcpp.h>
 #include <iostream>
 #include <string.h>
+#include <sys/stat.h>
+#include <libgen.h>
 #include "pdf-document.h"
 #include "pdf-image-result.h"
 #include "pdf-image-format.h"
@@ -82,8 +84,36 @@ Php::Value PdfDocument::asString() {
     return resultData;
 }
 
+static int _mkdir(const char *dir) {
+    char tmp[256];
+    char *p = NULL;
+    int status;
+    size_t len;
+
+    snprintf(tmp, sizeof(tmp),"%s",dir);
+    len = strlen(tmp);
+
+    if (tmp[len - 1] == '/') {
+        tmp[len - 1] = 0;
+    }
+
+    for(p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            status = mkdir(tmp, S_IRWXU);
+            if(status != 0) {
+                return -1;
+            }
+            *p = '/';
+        }
+    }
+
+    mkdir(tmp, S_IRWXU);
+    return 0;
+}
+
 Php::Value PdfDocument::toImage(Php::Parameters &params) {
-    int firstPage;
+    int firstPage = 0;
     int lastPage = _document->pages();
     int resolution = 75;
     int x;
@@ -91,9 +121,11 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     int imageHeight = 0;
     int pageWidth = 0;
     int pageHeight = 0;
+    struct stat buffer;
+
     std::vector<std::string> pages;
 
-    char * pattern = NULL;
+    char pattern[300];
     PdfImageFormat * format = NULL;
     poppler::page *page;
     poppler::page_renderer *renderer;
@@ -104,11 +136,9 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         Php::error << "Unable to determine type" << std::endl;
         return false;
     }
-    pattern = params[1].buffer();
 
-    if (strlen(pattern) + 10 > 255) {
-        Php::error << "Path is larger than 255 chars - Unable to proceed"
-                << std::endl;
+    if (params[1].size() + 10 > 255) {
+        Php::error << "Path is larger than 255 chars - Unable to proceed" << std::endl;
         return false;
     }
 
@@ -117,12 +147,21 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     }
 
     renderer = new poppler::page_renderer();
-    firstPage = 0;
+
+    params[1].stringValue().copy(pattern,params[1].size(),0);
+
+    char * _dirname = dirname(pattern);
+    // Check that the directory exists
+    if (stat (_dirname, &buffer) == -1) {
+        if(_mkdir(_dirname) != 0) {
+            throw Php::Exception("Directory doesn't exist - Unable to create");
+        }
+    }
 
     for (x = firstPage; x < lastPage; x++) {
-        char * outFile = new char[255];
-        memset(outFile, 0, 255);
-        sprintf(outFile, "%s-%d.%s", pattern, x, format->getExtension());
+        char outFile[255];// = new char[255];
+        memset(&outFile, 0, 255);
+        sprintf(&outFile[0], "%s-%d.%s", params[1].stringValue().c_str(), x, format->getExtension());
 
         page = _document->create_page(x);
 
@@ -130,8 +169,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         pageWidth = pageDim.width();
         pageHeight = pageDim.height();
 
-        image = renderer->render_page(page, resolution, resolution, 0, 0, -1,
-                -1, poppler::rotation_enum::rotate_0);
+        image = renderer->render_page(page, resolution, resolution, 0, 0, -1, -1, poppler::rotation_enum::rotate_0);
         image.save(outFile, format->getFormat(), resolution);
 
         imageWidth = image.width();
