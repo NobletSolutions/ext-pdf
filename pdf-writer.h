@@ -15,19 +15,6 @@
 #include <PDFWriter/PDFObject.h>
 #include <PDFWriter/AbstractContentContext.h>
 
-class PdfText : public Php::Base {
-private:
-    Php::Value x;
-    Php::Value y;
-    Php::Value text;
-public:
-    PdfText();
-    void __construct(Php::Parameters &params);
-    Php::Value getX();
-    Php::Value getY();
-    Php::Value getText();
-};
-
 class PdfWriter : public Php::Base {
 private:
     PDFWriter writer;
@@ -35,6 +22,7 @@ private:
     PDFObject * page;
     AbstractContentContext * contentContext;
     AbstractContentContext::TextOptions * textOptions;
+    PDFUsedFont * font = NULL;
 
     int64_t pageNum;
 public:
@@ -42,6 +30,7 @@ public:
     void __construct(Php::Parameters &params);
     void writeTextToPage(Php::Parameters &params);
     void writePdf();
+    void setFont(Php::Parameters &params);
 };
 
 #endif /* PDF_WRITER_H_ */

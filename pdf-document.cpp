@@ -8,58 +8,9 @@
 #include <phpcpp.h>
 #include <iostream>
 #include <string.h>
-#include "pdf-poppler.h"
-
-PdfImageResult::PdfImageResult(int inImageWidth, int inImageHeight,
-        int inPageWidth, int inPageHeight, std::vector<std::string> inPages) {
-    imageWidth = inImageWidth;
-    imageHeight = inImageHeight;
-    pageWidth = inPageWidth;
-    pageHeight = inPageHeight;
-    pages = inPages;
-}
-
-void PdfImageResult::__construct() {
-}
-
-Php::Value PdfImageResult::getImageWidth() {
-    return imageWidth;
-}
-
-Php::Value PdfImageResult::getImageHeight() {
-    return imageHeight;
-}
-
-Php::Value PdfImageResult::getPageWidth() {
-    return pageWidth;
-}
-
-Php::Value PdfImageResult::getPageHeight() {
-    return pageHeight;
-}
-
-Php::Value PdfImageResult::getNumberOfPages() {
-    return (int) pages.size();
-}
-
-Php::Value PdfImageResult::getPages() {
-    return pages;
-}
-
-PdfImageFormat::PdfImageFormat(const char * inFormat, const char * inExt) {
-    memset(&format, 0, 5);
-    memset(&ext, 0, 4);
-    strncpy(&format[0], inFormat, 4);
-    strncpy(&ext[0], inExt, 3);
-}
-
-const char * PdfImageFormat::getFormat() {
-    return &format[0];
-}
-
-const char * PdfImageFormat::getExtension() {
-    return &ext[0];
-}
+#include "pdf-document.h"
+#include "pdf-image-result.h"
+#include "pdf-image-format.h"
 
 PdfDocument::PdfDocument() {
     jpeg = new PdfImageFormat("jpeg", "jpg");

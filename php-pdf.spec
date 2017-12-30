@@ -4,7 +4,7 @@ Release:    1%{?dist}
 Summary:    PHP PDF Poppler/ PDFWriter Extension
 
 Group:      Development/Languages
-License:	Apache 2.0
+License:    Apache 2.0
 URL:        https://github.com/NobletSolutions/ext-pdf-writer
 Source0:    %{name}-%{version}.tar.bz2
 
@@ -24,11 +24,13 @@ make %{?_smp_mflags}
 %install
 mkdir -p %{buildroot}`/usr/bin/php-config --extension-dir`
 mkdir -p %{buildroot}/etc/php.d
+#mkdir -p %{buildroot}/php-pdf/fonts
 %make_install
 
 %files
 %{_libdir}/php/modules/pdf.so
 %{_sysconfdir}/php.d/60-pdf.ini
+#%{_font}/php-pdf/fonts/*
 
 %changelog
 

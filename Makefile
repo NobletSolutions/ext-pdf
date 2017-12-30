@@ -30,7 +30,7 @@ VERSION	= 0.4
 #
 
 INI_DIR				=	/etc/php.d
-
+FONT_DIR			:=  $(if $(FONT_DIR),$(FONT_DIR),/usr/share/php-pdf/fonts)
 
 #
 #	The extension dirs
@@ -116,7 +116,7 @@ OBJECTS				=	$(SOURCES:%.cpp=%.o)
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DFONT_DIR=\"${FONT_DIR}\" -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
 
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
@@ -136,6 +136,7 @@ ${EXTENSION}:			${OBJECTS}
 install:		
 						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
 						${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
+						${CP} fonts/* $(DESTDIR)/${FONT_DIR}/
 				
 clean:
 						${RM} ${EXTENSION} ${OBJECTS}

@@ -9,43 +9,57 @@
 #include <iostream>
 #include <string.h>
 #include "pdf-writer.h"
-
-PdfText::PdfText() = default;
-
-void PdfText::__construct(Php::Parameters &params) {
-//        Php::out << "x: " << params[0] << std::endl;
-//        Php::out << "y: " << params[1] << std::endl;
-//        Php::out << "Text: " << params[2] << std::endl;
-    x = params[0];
-    y = params[1];
-    text = params[2];
-}
-
-Php::Value PdfText::getX() {
-    return x;
-}
-
-Php::Value PdfText::getY() {
-    return y;
-}
-
-Php::Value PdfText::getText() {
-    return text;
-}
+#include "pdf-text.h"
+#include <sys/stat.h>
+#include <stdio.h>
 
 PdfWriter::PdfWriter() = default;
 
 void PdfWriter::__construct(Php::Parameters &params) {
 //        Php::out << "InputFile" << params[0] << std::endl;
 //        Php::out << "OutputFile" << params[1] << std::endl;
-
+    font = NULL;
+    struct stat buffer;
+    if (stat (params[0], &buffer) != 0) {
+        throw Php::Exception("File doesn't exist?");
+    }
     writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
+}
+
+void PdfWriter::setFont(Php::Parameters &params) {
+    struct stat buffer;
+    char * temp = NULL;
+    std::string fontDir = Php::ini_get("pdf.font_dir");
+
+    if (fontDir.empty()) {
+	    fontDir.assign(FONT_DIR);
+    }
+
+    if (fontDir.back() == '/') {
+        asprintf(&temp, "%s.ttf", params[0].stringValue().c_str());
+    } else {
+        asprintf(&temp, "/%s.ttf", params[0].stringValue().c_str());
+    }
+
+    fontDir.append(temp);
+    free(temp);
+
+    // Check that the font file exists
+    if (stat (fontDir.c_str(), &buffer) == -1) {
+        fontDir.append(" - Doesn't exist");
+        throw Php::Exception(fontDir);
+    }
+
+    font = writer.GetFontForFile(fontDir,0);
+
+    if (!font) {
+        throw Php::Exception("Unable to locate font");
+    }
 }
 
 void PdfWriter::writeTextToPage(Php::Parameters &params) {
     if (params[0] < 0) {
-//            Php::out << "Page Is Negative!" << std::endl;
-        return;
+        throw Php::Exception("Cannot write to a negative page");
     }
 
 //        Php::out << "Page: " << params[0] << std::endl;
@@ -63,18 +77,78 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
         PDFModifiedPage thePage(&writer, static_cast<double>(params[0]), true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
-        PDFUsedFont * font = writer.GetFontForFile("./arial.ttf", 0);
-        if (!font) {
-//                Php::out << "Failed to retrieve font ./arial.ttf" << std::endl;
-            return;
+        if (font == NULL) {
+            struct stat buffer;
+            std::string fontDir = Php::ini_get("pdf.font_dir");
+            if (fontDir.empty()) {
+                fontDir.assign(FONT_DIR);
+            }
+
+            if (fontDir[fontDir.size()] == '/') {
+                fontDir.append("arial.ttf");
+            } else {
+                fontDir.append("/arial.ttf");
+            }
+
+            // Check that the font file exists
+            if (stat (fontDir.c_str(), &buffer) == -1) {
+                fontDir.append(" - Doesn't exist");
+                throw Php::Exception(fontDir);
+            }
+
+            font = writer.GetFontForFile(fontDir, 0);
         }
 
-        AbstractContentContext::TextOptions opt(font, 12,
-                AbstractContentContext::eRGB, 0);
+        if (!font) {
+            throw Php::Exception("Unable to locate font");
+        }
+
+        AbstractContentContext::TextOptions defaultOptions(font, 10, AbstractContentContext::eRGB, 0);
         for (auto &iter : params[1]) {
             PdfText *obj = (PdfText *) iter.second.implementation();
-            contentContext->WriteText((double) obj->getX(),
-                    (double) obj->getY(), obj->getText(), opt);
+            if (obj->getFontSize() || obj->getFont() ) {
+                PDFUsedFont * customFont = NULL;
+                if(obj->getFont()) {
+                    struct stat buffer;
+                    std::string fontDir = Php::ini_get("pdf.font_dir");
+                    if (fontDir.empty()) {
+                        fontDir.assign(FONT_DIR);
+                    }
+                    char * temp = NULL;
+
+                    if (fontDir[fontDir.size()] == '/') {
+                        asprintf(&temp,"%s.ttf",obj->getFont().buffer());
+                    } else {
+                        asprintf(&temp,"/%s.ttf",obj->getFont().buffer());
+                    }
+
+                    fontDir.append(temp);
+                    free(temp);
+
+                    // Check that the font file exists
+                    if (stat (fontDir.c_str(), &buffer) == -1) {
+                        fontDir.append(" - Doesn't exist");
+                        throw Php::Exception(fontDir);
+                    }
+
+                    customFont = writer.GetFontForFile(fontDir, 0);
+                    if (!customFont) {
+                        throw Php::Exception("Unable to locate font");
+                    }
+                } else {
+                    customFont = font;
+                }
+
+                int _fontSize =10;
+                if(obj->getFontSize()) {
+                    _fontSize = (int)obj->getFontSize();
+                }
+
+                AbstractContentContext::TextOptions options(customFont, _fontSize, AbstractContentContext::eRGB, 0);
+                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), options);
+            } else {
+                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), defaultOptions);
+            }
         }
 
         thePage.EndContentContext();

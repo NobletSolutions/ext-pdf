@@ -1,7 +1,18 @@
 #include <phpcpp.h>
 #include <iostream>
-#include "pdf-poppler.h"
+#include "pdf-document.h"
+#include "pdf-image-result.h"
+#include "pdf-image-format.h"
 #include "pdf-writer.h"
+#include "pdf-text.h"
+
+#ifndef FONT_DIR
+#define FONT_DIR "/usr/share/php-pdf/fonts"
+#endif
+
+#ifndef VERSION
+#define VERSION "0.4"
+#endif
 
 /**
  *  tell the compiler that the get_module is a pure C function
@@ -18,7 +29,7 @@ extern "C" {
     {
         // static(!) Php::Extension object that should stay in memory
         // for the entire duration of the process (that's why it's static)
-        static Php::Extension extension("pdf", "0.4");
+        static Php::Extension extension("pdf", VERSION);
 
         Php::Namespace myNamespace("PDF");
 
@@ -26,7 +37,9 @@ extern "C" {
         pdfText.method<&PdfText::__construct>("__construct", {
                     Php::ByVal("x", Php::Type::Numeric),
                     Php::ByVal("y", Php::Type::Numeric),
-                    Php::ByVal("text", Php::Type::String)
+                    Php::ByVal("text", Php::Type::String),
+                    Php::ByVal("fontSize", Php::Type::Numeric, false),
+                    Php::ByVal("font", Php::Type::String, false)
                     });
         pdfText.method<&PdfText::getX>("getX");
         pdfText.method<&PdfText::getY>("getY");
@@ -39,6 +52,9 @@ extern "C" {
                     Php::ByVal("outputFile", Php::Type::String)
                     });
 
+	pdfWriter.method<&PdfWriter::setFont>("setFont", {
+			Php::ByVal("font",Php::Type::String)
+			});
         pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage",{
                 Php::ByVal("page",Php::Type::Numeric),
                 Php::ByVal("modifications",Php::Type::Array)
@@ -84,6 +100,7 @@ extern "C" {
         myNamespace.add(pdfText);
         myNamespace.add(pdfWriter);
         extension.add(myNamespace);
+        extension.add(Php::Ini("pdf.font_dirs", FONT_DIR));
 
         // return the extension
         return extension;
