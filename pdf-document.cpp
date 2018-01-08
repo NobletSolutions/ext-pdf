@@ -153,8 +153,9 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     char * _dirname = dirname(pattern);
     // Check that the directory exists
     if (stat (_dirname, &buffer) == -1) {
-        if(_mkdir(_dirname) != 0) {
-            throw Php::Exception("Directory doesn't exist - Unable to create");
+        if (_mkdir(_dirname) != 0) {
+            Php::error << "Unable to create dir " << _dirname << " " << strerror(errno) << std::endl;
+            throw Php::Exception("Unable to create dir");
         }
     }
 
