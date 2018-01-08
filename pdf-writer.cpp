@@ -16,8 +16,6 @@
 PdfWriter::PdfWriter() = default;
 
 void PdfWriter::__construct(Php::Parameters &params) {
-//        Php::out << "InputFile" << params[0] << std::endl;
-//        Php::out << "OutputFile" << params[1] << std::endl;
     font = NULL;
     struct stat buffer;
     if (stat (params[0], &buffer) != 0) {
@@ -61,17 +59,6 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
     if (params[0] < 0) {
         throw Php::Exception("Cannot write to a negative page");
     }
-
-//        Php::out << "Page: " << params[0] << std::endl;
-//        Php::out << "Count: " << params[1].size() << std::endl;
-//        for (auto &iter : params[1]) {
-//            PdfText *obj = (PdfText *)iter.second.implementation();
-//
-//            Php::out << "Loop: " << iter.first << std::endl;
-//            Php::out << "   x: " << obj->getX() << std::endl;
-//            Php::out << "   y: " << obj->getY() << std::endl;
-//            Php::out << "   t: " << obj->getText() << std::endl;
-//        }
 
     if (params[1].size() > 0) {
         PDFModifiedPage thePage(&writer, static_cast<double>(params[0]), true);
@@ -161,4 +148,3 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
 void PdfWriter::writePdf() {
     writer.EndPDF();
 }
-

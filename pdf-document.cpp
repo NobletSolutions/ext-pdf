@@ -101,7 +101,7 @@ static int _mkdir(const char *dir) {
         if (*p == '/') {
             *p = 0;
             status = mkdir(tmp, S_IRWXU);
-            if(status != 0) {
+            if (status != 0) {
                 return -1;
             }
             *p = '/';
@@ -160,7 +160,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     }
 
     for (x = firstPage; x < lastPage; x++) {
-        char outFile[255];// = new char[255];
+        char outFile[255];
         memset(&outFile, 0, 255);
         sprintf(&outFile[0], "%s-%d.%s", params[1].stringValue().c_str(), x, format->getExtension());
 
