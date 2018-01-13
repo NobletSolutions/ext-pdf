@@ -18,8 +18,8 @@
 #	are automatically generated
 #
 
-NAME				= pdf
-VERSION	= 0.8.0
+NAME	= pdf
+VERSION	= 0.8.1
 
 #
 #	Php.ini directories
