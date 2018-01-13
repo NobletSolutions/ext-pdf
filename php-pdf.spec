@@ -9,7 +9,7 @@ URL:        https://github.com/NobletSolutions/ext-pdf-writer
 Source0:    %{name}-%{version}.tar.bz2
 
 BuildRequires: php-devel >= 7.1 php-cpp-devel pdf-writer-devel poppler-cpp-devel fontconfig-devel
-Requires: php-cpp poppler-cpp pdf-writer php-common >= 7.1 fontconfig
+Requires: php-cpp poppler-cpp pdf-writer php-common >= 7.1 fontconfig php-pdf-fonts
 
 %description
 PHP PDF Poppler / PDFWriter extension
