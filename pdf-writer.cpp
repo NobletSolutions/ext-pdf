@@ -72,11 +72,14 @@ void PdfWriter::initializeFontDir() {
         s = FcPatternFormat (fs->fonts[j], format);
         if (s) {
             tmp.assign((char*)s);
-            tokens = split((const std::string) tmp,':');
-            fontNames = split((const std::string)tokens[0],',');
-            tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
-            allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
             FcStrFree (s);
+
+            tokens = split((const std::string) tmp,':');
+            if(tokens[1].find("php-pdf-fonts") != std::string::npos) {
+                fontNames = split((const std::string)tokens[0],',');
+                tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
+                allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
+            }
         }
     }
 
