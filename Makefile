@@ -19,7 +19,7 @@
 #
 
 NAME				= pdf
-VERSION	= 0.7.1
+VERSION	= 0.8.0
 
 #
 #	Php.ini directories
@@ -30,7 +30,6 @@ VERSION	= 0.7.1
 #
 
 INI_DIR				=	/etc/php.d
-FONT_DIR			:=  $(if $(FONT_DIR),$(FONT_DIR),/usr/share/php-pdf/fonts)
 
 #
 #	The extension dirs
@@ -85,9 +84,9 @@ LINKER				=	g++
 #	with a list of all flags that should be passed to the linker.
 #
 
-COMPILER_FLAGS		=	-Wall -c -O2 -std=c++11 -I/usr/include/poppler/cpp -fpic
+COMPILER_FLAGS		=	-Wall -c -O2 -std=c++11 -I/usr/include/poppler/cpp -fpic `pkgconf fontconfig --cflags`
 LINKER_FLAGS		=	-shared
-LINKER_DEPENDENCIES	=	-lphpcpp -lPDFWriter -lpoppler-cpp
+LINKER_DEPENDENCIES	=	-lphpcpp -lPDFWriter -lpoppler-cpp `pkgconf fontconfig --libs`
 
 
 #
@@ -116,7 +115,7 @@ OBJECTS				=	$(SOURCES:%.cpp=%.o)
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DFONT_DIR=\"${FONT_DIR}\" -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
 
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
@@ -136,8 +135,6 @@ ${EXTENSION}:			${OBJECTS}
 install:		
 						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
 						${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
-						${MKDIR} $(DESTDIR)/${FONT_DIR}/
-						${CP} fonts/* $(DESTDIR)/${FONT_DIR}/
 				
 clean:
 						${RM} ${EXTENSION} ${OBJECTS}

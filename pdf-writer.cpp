@@ -12,46 +12,112 @@
 #include "pdf-text.h"
 #include <sys/stat.h>
 #include <stdio.h>
+#include <dirent.h>
+#include <fontconfig/fontconfig.h>
+#include <PDFWriter/AbstractContentContext.h>
+
+std::vector<std::string> split(const std::string& s, char delimiter)
+{
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(s);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
+}
 
 PdfWriter::PdfWriter() = default;
 
 void PdfWriter::__construct(Php::Parameters &params) {
-    font = NULL;
     struct stat buffer;
     if (stat (params[0], &buffer) != 0) {
         throw Php::Exception("File doesn't exist?");
     }
+
     writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
+
+    this->initializeFontDir();
+}
+
+void PdfWriter::initializeFontDir() {
+    const FcChar8 *format = NULL;
+    FcObjectSet   *os = NULL;
+    FcFontSet     *fs = NULL;
+    FcPattern     *pat = NULL;
+    int j;
+
+    std::string tmp;
+    std::vector<std::string> tokens;
+    std::vector<std::string> fontNames;
+
+    pat     = FcPatternCreate();
+    os      = FcObjectSetBuild(FC_FAMILY, FC_STYLE, FC_FILE, (char *) 0);
+    format  = (const FcChar8 *) "%{+family,file{%{=unparse}}}";
+    fs      = FcFontList (0, pat, os);
+
+    if (os) {
+        FcObjectSetDestroy (os);
+    }
+
+    if (pat) {
+        FcPatternDestroy (pat);
+    }
+
+    for (j = 0; j < fs->nfont; j++)
+    {
+        FcChar8 *s;
+
+        s = FcPatternFormat (fs->fonts[j], format);
+        if (s) {
+            tmp.assign((char*)s);
+            tokens = split((const std::string) tmp,':');
+            fontNames = split((const std::string)tokens[0],',');
+            tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
+            allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
+            FcStrFree (s);
+        }
+    }
+
+    FcFini ();
+}
+
+AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize)
+{
+    AbstractContentContext::TextOptions * options;
+    std::map<std::string,std::string>::iterator it;
+    struct stat buffer;
+    PDFUsedFont * _font;
+
+    it = allFonts.find(requestedFont);
+
+    if (it != allFonts.end()) {
+        // Check that the font file exists
+        if (stat (it->second.c_str(), &buffer) == -1) {
+            throw Php::Exception("Font doesn't exist");
+        }
+
+        _font = writer.GetFontForFile(it->second.c_str(), 0);
+        if (!_font) {
+            throw Php::Exception("Unable to locate font");
+        }
+
+        options = new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, 0);
+
+        return options;
+    }
+
+    Php::out << "Tried to set font to: "<< requestedFont << std::endl;
+    throw Php::Exception("No such Font");
 }
 
 void PdfWriter::setFont(Php::Parameters &params) {
-    struct stat buffer;
-    char * temp = NULL;
-    std::string fontDir = Php::ini_get("pdf.font_dir");
-
-    if (fontDir.empty()) {
-	    fontDir.assign(FONT_DIR);
-    }
-
-    if (fontDir.back() == '/') {
-        asprintf(&temp, "%s.ttf", params[0].stringValue().c_str());
-    } else {
-        asprintf(&temp, "/%s.ttf", params[0].stringValue().c_str());
-    }
-
-    fontDir.append(temp);
-    free(temp);
-
-    // Check that the font file exists
-    if (stat (fontDir.c_str(), &buffer) == -1) {
-        fontDir.append(" - Doesn't exist");
-        throw Php::Exception(fontDir);
-    }
-
-    font = writer.GetFontForFile(fontDir,0);
-
-    if (!font) {
-        throw Php::Exception("Unable to locate font");
+    defaultFontName.assign(params[0].stringValue());
+    if(params.size() == 2) {
+        defaultText = this->getFont(params[0].stringValue(), (double)params[1]);
+    } else if (params.size() == 1) {
+        defaultText = this->getFont(params[0].stringValue(), 10);
     }
 }
 
@@ -64,77 +130,28 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
         PDFModifiedPage thePage(&writer, static_cast<double>(params[0]), true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
-        if (font == NULL) {
-            struct stat buffer;
-            std::string fontDir = Php::ini_get("pdf.font_dir");
-            if (fontDir.empty()) {
-                fontDir.assign(FONT_DIR);
-            }
-
-            if (fontDir[fontDir.size()] == '/') {
-                fontDir.append("arial.ttf");
-            } else {
-                fontDir.append("/arial.ttf");
-            }
-
-            // Check that the font file exists
-            if (stat (fontDir.c_str(), &buffer) == -1) {
-                fontDir.append(" - Doesn't exist");
-                throw Php::Exception(fontDir);
-            }
-
-            font = writer.GetFontForFile(fontDir, 0);
+        if (!defaultText) {
+            throw Php::Exception("No font set!");
         }
 
-        if (!font) {
-            throw Php::Exception("Unable to locate font");
-        }
-
-        AbstractContentContext::TextOptions defaultOptions(font, 10, AbstractContentContext::eRGB, 0);
+        AbstractContentContext::TextOptions defaultOptions(defaultFont, 10, AbstractContentContext::eRGB, 0);
         for (auto &iter : params[1]) {
             PdfText *obj = (PdfText *) iter.second.implementation();
             if (obj->getFontSize() || obj->getFont() ) {
-                PDFUsedFont * customFont = NULL;
-                if(obj->getFont()) {
-                    struct stat buffer;
-                    std::string fontDir = Php::ini_get("pdf.font_dir");
-                    if (fontDir.empty()) {
-                        fontDir.assign(FONT_DIR);
-                    }
-                    char * temp = NULL;
-
-                    if (fontDir[fontDir.size()] == '/') {
-                        asprintf(&temp,"%s.ttf",obj->getFont().buffer());
-                    } else {
-                        asprintf(&temp,"/%s.ttf",obj->getFont().buffer());
-                    }
-
-                    fontDir.append(temp);
-                    free(temp);
-
-                    // Check that the font file exists
-                    if (stat (fontDir.c_str(), &buffer) == -1) {
-                        fontDir.append(" - Doesn't exist");
-                        throw Php::Exception(fontDir);
-                    }
-
-                    customFont = writer.GetFontForFile(fontDir, 0);
-                    if (!customFont) {
-                        throw Php::Exception("Unable to locate font");
-                    }
-                } else {
-                    customFont = font;
-                }
-
-                int _fontSize =10;
+                int _fontSize = 10;
+                std::string fontName(obj->getFont().stringValue());
                 if(obj->getFontSize()) {
                     _fontSize = (int)obj->getFontSize();
                 }
 
-                AbstractContentContext::TextOptions options(customFont, _fontSize, AbstractContentContext::eRGB, 0);
-                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), options);
+                if(fontName.empty()){
+                    fontName.assign(defaultFontName);
+                }
+
+                AbstractContentContext::TextOptions * options = this->getFont(fontName, _fontSize);
+                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
             } else {
-                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), defaultOptions);
+                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *defaultText);
             }
         }
 
@@ -147,4 +164,13 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
 
 void PdfWriter::writePdf() {
     writer.EndPDF();
+}
+
+Php::Value PdfWriter::getAllFonts() {
+    std::vector<std::string> fonts;
+    for(std::map<std::string,std::string>::iterator it = allFonts.begin(); it != allFonts.end(); ++it) {
+      fonts.push_back(it->first);
+    }
+
+    return fonts;
 }

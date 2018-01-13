@@ -4,23 +4,24 @@ if (!class_exists('\Pdf\PdfText')) {
     return;
 }
 
-//if (class_exists('\Pdf\PdfWriter')) {
-//    echo "Writer exists\n";
-//    $pdfWriter = new \Pdf\PdfWriter('./File.pdf', './Output.pdf');
-//    echo "Set font...\n";
-//    $pdfWriter->setFont("arial");
-//    echo "Font set\n";
-//    $pdfWriter->writeTextToPage(0, [ new \Pdf\PdfText(78.5,640,"The text to write"),new \Pdf\PdfText(78.5,540,"More text to write"), new \Pdf\PdfText(78.5,440,"Gnat defaced this PDF!")]);
-//    $pdfWriter->writeTextToPage(1, [ new \Pdf\PdfText(98.5,640,"The text to write"),new \Pdf\PdfText(98.5,540,"More text to write"), new \Pdf\PdfText(98.5,440,"Gnat defaced this PDF!")]);
-//    $pdfWriter->writeTextToPage(0, [new \Pdf\PdfText(98.5, 640, "20 - The text to write", 20, "DejaVuSansMono-BoldOblique"), new \Pdf\PdfText(98.5, 540, "9 - More text to write", 8), new \Pdf\PdfText(98.5, 440, "30-Gnat defaced this PDF!", 30)]);
-//    echo "Wrote text\n";
-//    $pdfWriter->save();
-//    echo "Saved\n";
-//
-//} else {
-//    echo "Class doesn't exist\n";
-//}
+if (class_exists('\Pdf\PdfWriter')) {
+    echo "Writer exists\n";
+    $pdfWriter = new \Pdf\PdfWriter('./File.pdf', './Output.pdf');
+    echo "Set font...\n";
+	$pdfWriter->setFont("Arial");
+    echo "Font set\n";
+    echo "All Fonts: ".print_r($pdfWriter->getAllFonts(),true)."\n";
+    $pdfWriter->writeTextToPage(0, [ new \Pdf\PdfText(78.5,640,"The text to write"),new \Pdf\PdfText(78.5,540,"More text to write"), new \Pdf\PdfText(78.5,440,"Gnat defaced this PDF!")]);
+    $pdfWriter->writeTextToPage(1, [ new \Pdf\PdfText(98.5,640,"The text to write"),new \Pdf\PdfText(98.5,540,"More text to write"), new \Pdf\PdfText(98.5,440,"Gnat defaced this PDF!")]);
+    $pdfWriter->writeTextToPage(0, [new \Pdf\PdfText(98.5, 640, "20 - The text to write", 20, "DejaVu Sans"), new \Pdf\PdfText(98.5, 540, "9 - More text to write", 8), new \Pdf\PdfText(98.5, 440, "30-Gnat defaced this PDF!", 30,"DejaVu Serif")]);
+    echo "Wrote text\n";
+    $pdfWriter->save();
+    echo "Saved\n";
 
+} else {
+    echo "Class doesn't exist\n";
+}
+return;
 if (class_exists('\Pdf\PdfDocument')) {
     //$pdfDocument = new \Pdf\PdfDocument('./File.pdf');
     $pdfDoc = new \Pdf\PdfDocument('./File.pdf', 'user', 'password');

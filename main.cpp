@@ -6,12 +6,8 @@
 #include "pdf-writer.h"
 #include "pdf-text.h"
 
-#ifndef FONT_DIR
-#define FONT_DIR "/usr/share/php-pdf/fonts"
-#endif
-
 #ifndef VERSION
-#define VERSION "0.4"
+#define VERSION "0.8"
 #endif
 
 /**
@@ -33,31 +29,36 @@ extern "C" {
 
         Php::Namespace myNamespace("PDF");
 
+        // PdfText Methods =========================
         Php::Class<PdfText> pdfText("PdfText");
         pdfText.method<&PdfText::__construct>("__construct", {
-                    Php::ByVal("x", Php::Type::Numeric),
-                    Php::ByVal("y", Php::Type::Numeric),
-                    Php::ByVal("text", Php::Type::String),
-                    Php::ByVal("fontSize", Php::Type::Numeric, false),
-                    Php::ByVal("font", Php::Type::String, false)
-                    });
+            Php::ByVal("x", Php::Type::Numeric),
+            Php::ByVal("y", Php::Type::Numeric),
+            Php::ByVal("text", Php::Type::String),
+            Php::ByVal("fontSize", Php::Type::Numeric, false),
+            Php::ByVal("font", Php::Type::String, false)
+        });
+
         pdfText.method<&PdfText::getX>("getX");
         pdfText.method<&PdfText::getY>("getY");
         pdfText.method<&PdfText::getText>("getText");
         pdfText.method<&PdfText::getText>("__toString");
 
+        // PdfWriter Methods =========================
         Php::Class<PdfWriter> pdfWriter("PdfWriter");
         pdfWriter.method<&PdfWriter::__construct>("__construct", {
-                    Php::ByVal("inputFile", Php::Type::String),
-                    Php::ByVal("outputFile", Php::Type::String)
-                    });
+            Php::ByVal("inputFile", Php::Type::String),
+            Php::ByVal("outputFile", Php::Type::String)
+        });
 
-	pdfWriter.method<&PdfWriter::setFont>("setFont", {
+        pdfWriter.method<&PdfWriter::getAllFonts>("getAllFonts");
+        pdfWriter.method<&PdfWriter::setFont>("setFont", {
 			Php::ByVal("font",Php::Type::String)
-			});
+        });
+
         pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage",{
-                Php::ByVal("page",Php::Type::Numeric),
-                Php::ByVal("modifications",Php::Type::Array)
+            Php::ByVal("page",Php::Type::Numeric),
+            Php::ByVal("modifications",Php::Type::Array)
         });
 
         pdfWriter.method<&PdfWriter::writePdf>("save");
@@ -81,6 +82,7 @@ extern "C" {
             Php::ByVal("user", Php::Type::String, false),
             Php::ByVal("password", Php::Type::String, false)
         });
+
         pdfDocument.method<&PdfDocument::getMajorVersion>("getMajorVersion");
         pdfDocument.method<&PdfDocument::getMinorVersion>("getMinorVersion");
         pdfDocument.method<&PdfDocument::hasEmbeddedFiles>("hasEmbeddedFiles");
@@ -100,7 +102,6 @@ extern "C" {
         myNamespace.add(pdfText);
         myNamespace.add(pdfWriter);
         extension.add(myNamespace);
-        extension.add(Php::Ini("pdf.font_dirs", FONT_DIR));
 
         // return the extension
         return extension;
