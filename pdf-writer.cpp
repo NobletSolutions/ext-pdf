@@ -16,6 +16,7 @@
 #include <fontconfig/fontconfig.h>
 #include <PDFWriter/AbstractContentContext.h>
 
+std::map<std::string,std::string> allFonts;
 std::vector<std::string> split(const std::string& s, char delimiter)
 {
    std::vector<std::string> tokens;
@@ -28,20 +29,10 @@ std::vector<std::string> split(const std::string& s, char delimiter)
    return tokens;
 }
 
-PdfWriter::PdfWriter() = default;
-
-void PdfWriter::__construct(Php::Parameters &params) {
-    struct stat buffer;
-    if (stat (params[0], &buffer) != 0) {
-        throw Php::Exception("File doesn't exist?");
+void initializeFonts() {
+    if(allFonts.size()>0) {
+	    return;
     }
-
-    writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
-
-    this->initializeFontDir();
-}
-
-void PdfWriter::initializeFontDir() {
     const FcChar8 *format = NULL;
     FcObjectSet   *os = NULL;
     FcFontSet     *fs = NULL;
@@ -86,6 +77,36 @@ void PdfWriter::initializeFontDir() {
     FcFini ();
 }
 
+std::vector<std::string> getFonts(){
+    if (allFonts.empty()) {
+        initializeFonts();
+    }
+
+    std::vector<std::string> fonts;
+    for(std::map<std::string,std::string>::iterator it = allFonts.begin(); it != allFonts.end(); ++it) {
+      fonts.push_back(it->first);
+    }
+
+    return fonts;
+}
+
+Php::Value fonts() {
+    return getFonts();
+}
+
+PdfWriter::PdfWriter() = default;
+
+void PdfWriter::__construct(Php::Parameters &params) {
+    struct stat buffer;
+    if (stat (params[0], &buffer) != 0) {
+        throw Php::Exception("File doesn't exist?");
+    }
+
+    writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
+
+    initializeFonts();
+}
+
 AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize)
 {
     AbstractContentContext::TextOptions * options;
@@ -111,7 +132,7 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         return options;
     }
 
-    Php::out << "Tried to set font to: "<< requestedFont << std::endl;
+    Php::out << "Tried to get font: "<< requestedFont << std::endl;
     throw Php::Exception("No such Font");
 }
 
@@ -170,10 +191,6 @@ void PdfWriter::writePdf() {
 }
 
 Php::Value PdfWriter::getAllFonts() {
-    std::vector<std::string> fonts;
-    for(std::map<std::string,std::string>::iterator it = allFonts.begin(); it != allFonts.end(); ++it) {
-      fonts.push_back(it->first);
-    }
-
-    return fonts;
+    return getFonts();
 }
+

@@ -97,6 +97,7 @@ extern "C" {
             Php::ByVal("dpi", Php::Type::Numeric,false)
         });
 
+        myNamespace.add("getFonts",fonts);
         myNamespace.add(PdfImageResult);
         myNamespace.add(pdfDocument);
         myNamespace.add(pdfText);

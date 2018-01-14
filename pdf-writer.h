@@ -15,6 +15,10 @@
 #include <PDFWriter/PDFObject.h>
 #include <PDFWriter/AbstractContentContext.h>
 
+void initializeFonts();
+std::vector<std::string> getFonts();
+Php::Value fonts();
+
 class PdfWriter : public Php::Base {
 private:
     PDFWriter writer;
@@ -26,8 +30,6 @@ private:
     PDFUsedFont * defaultFont = NULL;
     AbstractContentContext::TextOptions * defaultText;
     int64_t pageNum;
-    std::map<std::string,std::string> allFonts;
-    void initializeFontDir();
     AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10);
 public:
     PdfWriter();

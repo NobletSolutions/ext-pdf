@@ -3,6 +3,7 @@ if (!class_exists('\Pdf\PdfText')) {
     echo "PdfText doesn't exist\n";
     return;
 }
+echo "Fonts: ".print_r(\Pdf\getFonts(),true)."\n";
 
 if (class_exists('\Pdf\PdfWriter')) {
     echo "Writer exists\n";
