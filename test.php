@@ -12,13 +12,27 @@ if (class_exists('\Pdf\PdfWriter')) {
 	$pdfWriter->setFont("Arial");
     echo "Font set\n";
     echo "All Fonts: ".print_r($pdfWriter->getAllFonts(),true)."\n";
-    $pdfWriter->writeTextToPage(0, [ new \Pdf\PdfText(78.5,640,"The text to write"),new \Pdf\PdfText(78.5,540,"More text to write"), new \Pdf\PdfText(78.5,440,"Gnat defaced this PDF!")]);
-    $pdfWriter->writeTextToPage(1, [ new \Pdf\PdfText(98.5,640,"The text to write"),new \Pdf\PdfText(98.5,540,"More text to write"), new \Pdf\PdfText(98.5,440,"Gnat defaced this PDF!")]);
     $pdfWriter->writeTextToPage(0, [
-    	new \Pdf\PdfText(98.5, 640, "20 - The text to write - Archivo", 20, "Archivo"), 
-    	new \Pdf\PdfText(98.5, 540, "9 - More text to write - Cormorant", 8,"Cormorant Garamond"), 
-    	new \Pdf\PdfText(98.5, 440, "30-Gnat defaced this PDF! - Faustina", 30,"Faustina")
+    	new \Pdf\PdfText(88.5,640,"The text to write\nTwo lines"),
+    	new \Pdf\PdfText(88.5,540,"PLAN 7711449
+BLOCK 8
+LOT 39
+EXCEPTING THEREOUT ALL MINES AND MINERALS"), 
+    	new \Pdf\PdfText(88.5,440,"Gnat defaced this PDF!")
 	]);
+    
+    $pdfWriter->writeTextToPage(1, [
+    	new \Pdf\PdfText(98.5,640,"The text to write"),
+    	new \Pdf\PdfText(98.5,540,"More text to write"),
+    	new \Pdf\PdfText(98.5,440,"Gnat defaced this PDF!")
+	]);
+
+//    $pdfWriter->writeTextToPage(0, [
+//    	new \Pdf\PdfText(98.5, 640, "20 - The text to write - Archivo", 20, "Archivo"), 
+//    	new \Pdf\PdfText(98.5, 540, "9 - More text to write - Cormorant", 8,"Cormorant Garamond"), 
+//    	new \Pdf\PdfText(98.5, 440, "30-Gnat defaced this PDF! - Faustina", 30,"Faustina")
+//	]);
+
     echo "Wrote text\n";
     $pdfWriter->save();
     echo "Saved\n";

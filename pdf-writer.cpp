@@ -9,6 +9,7 @@
 
 #include <fontconfig/fontconfig.h>
 #include <PDFWriter/EPDFVersion.h>
+#include <PDFWriter/PDFUsedFont.h>
 #include <sys/stat.h>
 #include <iostream>
 #include <iterator>
@@ -161,8 +162,12 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
             throw Php::Exception("No font set!");
         }
 
+        AbstractContentContext::TextOptions * options;
+
+        // iterate over each PdfText point
         for (auto &iter : params[1]) {
             PdfText *obj = (PdfText *) iter.second.implementation();
+
             if (obj->getFontSize() || obj->getFont() ) {
                 int _fontSize = 10;
                 std::string fontName(obj->getFont().stringValue());
@@ -174,11 +179,24 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
                     fontName.assign(defaultFontName);
                 }
 
-                AbstractContentContext::TextOptions * options = this->getFont(fontName, _fontSize);
-                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
+                options = this->getFont(fontName, _fontSize);
             } else {
-                contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *defaultText);
+                options = defaultText;
             }
+
+            if (obj->getText().stringValue().find("\n") != std::string::npos) {
+                std::vector<std::string> tokens = split(obj->getText().stringValue(),'\n');
+                double lineHeight = 0;
+                PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H",14);
+
+                for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
+                    contentContext->WriteText((double) obj->getX(), (double) obj->getY()+lineHeight, *it, *options);
+                    lineHeight += textDimensions.height;
+                }
+                continue;
+            }
+
+            contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
         }
 
         thePage.EndContentContext();
