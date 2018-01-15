@@ -190,7 +190,7 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
                 PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H",14);
 
                 for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
-                    contentContext->WriteText((double) obj->getX(), (double) obj->getY()+lineHeight, *it, *options);
+                    contentContext->WriteText((double) obj->getX(), (double) obj->getY()-lineHeight, *it, *options);
                     lineHeight += textDimensions.height;
                 }
                 continue;
