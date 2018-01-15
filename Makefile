@@ -140,7 +140,8 @@ clean:
 						${RM} ${EXTENSION} ${OBJECTS}
 
 dist: clean
-	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ./php-${NAME}-${VERSION}.tar.bz2 .
+	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
+	cp ../php-${NAME}-${VERSION}.tar.bz2 .
 
 $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
