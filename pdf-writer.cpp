@@ -5,16 +5,19 @@
  *      Author: gnat
  */
 
-#include <phpcpp.h>
-#include <iostream>
-#include <string.h>
 #include "pdf-writer.h"
-#include "pdf-text.h"
-#include <sys/stat.h>
-#include <stdio.h>
-#include <dirent.h>
+
 #include <fontconfig/fontconfig.h>
-#include <PDFWriter/AbstractContentContext.h>
+#include <PDFWriter/EPDFVersion.h>
+#include <sys/stat.h>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "pdf-text.h"
 
 std::map<std::string,std::string> allFonts;
 std::vector<std::string> split(const std::string& s, char delimiter)
@@ -43,7 +46,7 @@ void initializeFonts() {
     std::vector<std::string> tokens;
     std::vector<std::string> fontNames;
 
-    pat     = FcPatternCreate();
+    pat     = FcNameParse ((FcChar8 *) ":style=Regular");
     os      = FcObjectSetBuild(FC_FAMILY, FC_STYLE, FC_FILE, (char *) 0);
     format  = (const FcChar8 *) "%{+family,file{%{=unparse}}}";
     fs      = FcFontList (0, pat, os);
@@ -158,7 +161,6 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
             throw Php::Exception("No font set!");
         }
 
-        AbstractContentContext::TextOptions defaultOptions(defaultFont, 10, AbstractContentContext::eRGB, 0);
         for (auto &iter : params[1]) {
             PdfText *obj = (PdfText *) iter.second.implementation();
             if (obj->getFontSize() || obj->getFont() ) {
