@@ -117,13 +117,8 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     int lastPage = _document->pages();
     int resolution = 75;
     int x;
-    int imageWidth = 0;
-    int imageHeight = 0;
-    int pageWidth = 0;
-    int pageHeight = 0;
     struct stat buffer;
-
-    std::vector<std::string> pages;
+    Php::Value returnValue;
 
     char pattern[300];
     PdfImageFormat * format = NULL;
@@ -160,7 +155,12 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     }
 
     for (x = firstPage; x < lastPage; x++) {
+        int imageWidth = 0;
+        int imageHeight = 0;
+        int pageWidth = 0;
+        int pageHeight = 0;
         char outFile[255];
+
         memset(&outFile, 0, 255);
         sprintf(&outFile[0], "%s-%d.%s", params[1].stringValue().c_str(), x, format->getExtension());
 
@@ -176,12 +176,10 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         imageWidth = image.width();
         imageHeight = image.height();
 
-        pages.push_back(outFile);
+        returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(pageWidth, pageHeight, imageWidth, imageHeight, outFile));
     }
 
-    PdfImageResult * obj = new PdfImageResult(pageWidth, pageHeight, imageWidth,
-            imageHeight, pages);
-    return Php::Object("\\PDF\\PdfImageResult", obj);
+    return returnValue;
 }
 
 PdfImageFormat * PdfDocument::getImageFormat(int inFormat) {

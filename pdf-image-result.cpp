@@ -11,12 +11,12 @@
 #include "pdf-image-result.h"
 
 PdfImageResult::PdfImageResult(int inImageWidth, int inImageHeight,
-        int inPageWidth, int inPageHeight, std::vector<std::string> inPages) {
+        int inPageWidth, int inPageHeight, std::string inPage) {
     imageWidth = inImageWidth;
     imageHeight = inImageHeight;
     pageWidth = inPageWidth;
     pageHeight = inPageHeight;
-    pages = inPages;
+    page = inPage;
 }
 
 void PdfImageResult::__construct() {
@@ -38,11 +38,7 @@ Php::Value PdfImageResult::getPageHeight() {
     return pageHeight;
 }
 
-Php::Value PdfImageResult::getNumberOfPages() {
-    return (int) pages.size();
-}
-
-Php::Value PdfImageResult::getPages() {
-    return pages;
+Php::Value PdfImageResult::getPage() {
+    return page;
 }
 

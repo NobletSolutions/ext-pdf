@@ -24,17 +24,16 @@ private:
     int imageHeight;
     int pageWidth;
     int pageHeight;
-    std::vector<std::string> pages;
+    std::string page;
 public:
     PdfImageResult(int inImageWidth, int inImageHeight, int inPageWidth,
-            int inPageHeight, std::vector<std::string> inPages);
+            int inPageHeight, std::string inPage);
     void __construct();
     Php::Value getImageWidth();
     Php::Value getImageHeight();
     Php::Value getPageWidth();
     Php::Value getPageHeight();
-    Php::Value getNumberOfPages();
-    Php::Value getPages();
+    Php::Value getPage();
 };
 
 #endif /* PDF_POPPLER_H_ */

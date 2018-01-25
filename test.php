@@ -5,6 +5,7 @@ if (!class_exists('\Pdf\PdfText')) {
 }
 echo "Fonts: ".print_r(\Pdf\getFonts(),true)."\n";
 
+/*
 if (class_exists('\Pdf\PdfWriter')) {
     echo "Writer exists\n";
     $pdfWriter = new \Pdf\PdfWriter('./File.pdf', './Output.pdf');
@@ -40,7 +41,7 @@ EXCEPTING THEREOUT ALL MINES AND MINERALS"),
 } else {
     echo "Class doesn't exist\n";
 }
-return;
+*/
 if (class_exists('\Pdf\PdfDocument')) {
     //$pdfDocument = new \Pdf\PdfDocument('./File.pdf');
     $pdfDoc = new \Pdf\PdfDocument('./File.pdf', 'user', 'password');
@@ -66,10 +67,11 @@ if (class_exists('\Pdf\PdfDocument')) {
     if ($res === false) {
         echo "FAILED\n";
     } else {
-        echo "Image: " . $res->getImageWidth() . " x " . $res->getImageHeight() . "\n";
-        echo "Page: " . $res->getPageWidth() . " x " . $res->getPageHeight() . "\n";
-        echo "NumPages: " . $res->getNumberOfPages() . "\n";
-        echo "Pages: " . print_r($res->getPages(), true) . "\n";
+       foreach($res as $pdfImageRest) {
+            echo "Image: " . $pdfImageRest->getImageWidth() . " x " . $pdfImageRest->getImageHeight() . "\n";
+            echo "Page: " . $pdfImageRest->getPageWidth() . " x " . $pdfImageRest->getPageHeight() . "\n";
+            echo "Page: " . $pdfImageRest->getPage() . "\n";
+       }
     }
 
     echo ".. done\n";

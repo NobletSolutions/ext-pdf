@@ -69,8 +69,7 @@ extern "C" {
         PdfImageResult.method<&PdfImageResult::getImageHeight>("getImageHeight");
         PdfImageResult.method<&PdfImageResult::getPageWidth>("getPageWidth");
         PdfImageResult.method<&PdfImageResult::getPageHeight>("getPageHeight");
-        PdfImageResult.method<&PdfImageResult::getNumberOfPages>("getNumberOfPages");
-        PdfImageResult.method<&PdfImageResult::getPages>("getPages");
+        PdfImageResult.method<&PdfImageResult::getPage>("getPage");
 
         Php::Class<PdfDocument> pdfDocument("PdfDocument");
         pdfDocument.add(Php::Constant("IMAGE_JPEG",1));
