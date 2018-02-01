@@ -67,10 +67,11 @@ if (class_exists('\Pdf\PdfDocument')) {
     if ($res === false) {
         echo "FAILED\n";
     } else {
-       foreach($res as $pdfImageRest) {
-            echo "Image: " . $pdfImageRest->getImageWidth() . " x " . $pdfImageRest->getImageHeight() . "\n";
-            echo "Page: " . $pdfImageRest->getPageWidth() . " x " . $pdfImageRest->getPageHeight() . "\n";
-            echo "Page: " . $pdfImageRest->getPage() . "\n";
+       foreach($res as $pageNum => $pdfImageRest) {
+            echo "Page: $pageNum\n";
+            echo "\tImage: " . $pdfImageRest->getImageWidth() . " x " . $pdfImageRest->getImageHeight() . "\n";
+            echo "\tPage: " . $pdfImageRest->getPageWidth() . " x " . $pdfImageRest->getPageHeight() . "\n";
+            echo "\tPage: " . $pdfImageRest->getPage() . "\n";
        }
     }
 
