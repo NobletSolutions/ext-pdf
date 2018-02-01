@@ -70,10 +70,15 @@ void initializeFonts() {
             FcStrFree (s);
 
             tokens = split((const std::string) tmp,':');
-            if(tokens[1].find("php-pdf-fonts") != std::string::npos) {
+            if (tokens[1].find("php-pdf-fonts") != std::string::npos) {
                 fontNames = split((const std::string)tokens[0],',');
-                tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
-                allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
+		// This is a hack since our Regular style filter is returning multiple fonts.
+		// So if the font name has only one name we expect its the 'regular' typeface as well
+		// I need a better way to use fc-list / library to only get the Regular style typeface
+                if (fontNames.size() == 1) { 
+	            tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
+                    allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
+                }
             }
         }
     }
