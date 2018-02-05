@@ -1,5 +1,5 @@
 Name:       php-pdf
-Version:    0.8.7
+Version:    0.8.8
 Release:    1%{?dist}
 Summary:    PHP PDF Poppler/ PDFWriter Extension
 
