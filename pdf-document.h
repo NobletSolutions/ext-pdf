@@ -35,6 +35,7 @@ public:
     Php::Value getMinorVersion();
     Php::Value getCreator();
     Php::Value getCreationDate();
+    Php::Value getModifiedDate();
     Php::Value hasEmbeddedFiles();
     Php::Value isEncrypted();
     Php::Value isLinear();

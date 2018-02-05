@@ -13,6 +13,7 @@
 #include "pdf-document.h"
 #include "pdf-image-result.h"
 #include "pdf-image-format.h"
+#include <limits.h>
 
 PdfDocument::PdfDocument() {
     jpeg = new PdfImageFormat("jpeg", "jpg");
@@ -34,9 +35,24 @@ Php::Value PdfDocument::getCreator(){
 }
 
 Php::Value PdfDocument::getCreationDate(){
+    char buffer[50];
     poppler::time_type t = _document->info_date("CreationDate");
-    char buffer[200];
-    snprintf(buffer,200,"@%u",t);
+    if(t == UINT_MAX) {
+        return nullptr;
+    }
+
+    snprintf(buffer,50,"@%u",t);
+    return Php::Object("DateTime", buffer);
+}
+
+Php::Value PdfDocument::getModifiedDate() {
+    char buffer[50];
+    poppler::time_type t = _document->info_date("ModDate");
+    if(t == UINT_MAX) {
+        return nullptr;
+    }
+
+    snprintf(buffer,50,"@%u",t);
     return Php::Object("DateTime", buffer);
 }
 
