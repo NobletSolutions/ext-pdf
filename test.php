@@ -46,6 +46,8 @@ if (class_exists('\Pdf\PdfDocument')) {
     //$pdfDocument = new \Pdf\PdfDocument('./File.pdf');
     $pdfDoc = new \Pdf\PdfDocument('./File.pdf', 'user', 'password');
 
+    echo "Created On: ".$pdfDoc->getCreationDate()->format('Y-m-d H:i:s')."\n";
+    echo "CreatedBy: ".$pdfDoc->getCreator()."\n";
     echo "PDF Version: " . $pdfDoc->getMajorVersion() . '.' . $pdfDoc->getMinorVersion() . "\n";
     echo "Is Encrypted: " . (($pdfDoc->isEncrypted() === true) ? 'Yes' : 'No') . "\n";
     echo "Is Linear: " . (($pdfDoc->isLinear() === true) ? 'Yes' : 'No') . "\n";

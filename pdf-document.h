@@ -33,6 +33,8 @@ public:
     void __construct(Php::Parameters &params);
     Php::Value getMajorVersion();
     Php::Value getMinorVersion();
+    Php::Value getCreator();
+    Php::Value getCreationDate();
     Php::Value hasEmbeddedFiles();
     Php::Value isEncrypted();
     Php::Value isLinear();

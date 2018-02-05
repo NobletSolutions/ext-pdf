@@ -84,6 +84,8 @@ extern "C" {
 
         pdfDocument.method<&PdfDocument::getMajorVersion>("getMajorVersion");
         pdfDocument.method<&PdfDocument::getMinorVersion>("getMinorVersion");
+        pdfDocument.method<&PdfDocument::getCreationDate>("getCreationDate");
+        pdfDocument.method<&PdfDocument::getCreator>("getCreator");
         pdfDocument.method<&PdfDocument::hasEmbeddedFiles>("hasEmbeddedFiles");
         pdfDocument.method<&PdfDocument::isLocked>("isLocked");
         pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted");

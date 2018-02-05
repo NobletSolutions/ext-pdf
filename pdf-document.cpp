@@ -24,6 +24,22 @@ void PdfDocument::__construct(Php::Parameters &params) {
     _document = poppler::document::load_from_file(params[0]); //,params[1],params[2]);
 }
 
+Php::Value PdfDocument::getCreator(){
+    poppler::byte_array arr;
+    char *c_str;
+
+    arr = _document->info_key("Creator").to_utf8();
+    c_str = &arr[0];
+    return c_str;
+}
+
+Php::Value PdfDocument::getCreationDate(){
+    poppler::time_type t = _document->info_date("CreationDate");
+    char buffer[200];
+    snprintf(buffer,200,"@%u",t);
+    return Php::Object("DateTime", buffer);
+}
+
 Php::Value PdfDocument::getMajorVersion() {
     if (_major == 0) {
         _document->get_pdf_version(&_major, &_minor);
