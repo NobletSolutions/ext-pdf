@@ -27,17 +27,19 @@ std::vector<std::string> split(const std::string& s, char delimiter)
    std::vector<std::string> tokens;
    std::string token;
    std::istringstream tokenStream(s);
-   while (std::getline(tokenStream, token, delimiter))
-   {
+
+   while (std::getline(tokenStream, token, delimiter)) {
       tokens.push_back(token);
    }
+
    return tokens;
 }
 
 void initializeFonts() {
-    if(allFonts.size()>0) {
+    if (allFonts.size() > 0) {
 	    return;
     }
+
     const FcChar8 *format = NULL;
     FcObjectSet   *os = NULL;
     FcFontSet     *fs = NULL;
@@ -73,11 +75,11 @@ void initializeFonts() {
             tokens = split((const std::string) tmp,':');
             if (tokens[1].find("php-pdf-fonts") != std::string::npos) {
                 fontNames = split((const std::string)tokens[0],',');
-		// This is a hack since our Regular style filter is returning multiple fonts.
-		// So if the font name has only one name we expect its the 'regular' typeface as well
-		// I need a better way to use fc-list / library to only get the Regular style typeface
+                // This is a hack since our Regular style filter is returning multiple fonts.
+                // So if the font name has only one name we expect its the 'regular' typeface as well
+                // I need a better way to use fc-list / library to only get the Regular style typeface
                 if (fontNames.size() == 1) { 
-	            tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
+                    tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
                     allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
                 }
             }
@@ -93,7 +95,7 @@ std::vector<std::string> getFonts(){
     }
 
     std::vector<std::string> fonts;
-    for(std::map<std::string,std::string>::iterator it = allFonts.begin(); it != allFonts.end(); ++it) {
+    for (std::map<std::string,std::string>::iterator it = allFonts.begin(); it != allFonts.end(); ++it) {
       fonts.push_back(it->first);
     }
 
@@ -144,13 +146,13 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         return options;
     }
 
-    Php::out << "Tried to get font: "<< requestedFont << std::endl;
+    //Php::out << "Tried to get font: "<< requestedFont << std::endl;
     throw Php::Exception("No such Font");
 }
 
 void PdfWriter::setFont(Php::Parameters &params) {
     defaultFontName.assign(params[0].stringValue());
-    if(params.size() == 2) {
+    if (params.size() == 2) {
         defaultText = this->getFont(params[0].stringValue(), (double)params[1]);
     } else if (params.size() == 1) {
         defaultText = this->getFont(params[0].stringValue(), 10);
@@ -243,7 +245,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         }
 
         writer.StartPDF(_outputFileName, ePDFVersion14);
-        writer.AppendPDFPagesFromPDF(_inputFileName, pageRange);
+        writer.AppendPDFPagesFromPDF(tempfile, pageRange);
         writer.EndPDF();
         std::remove(tempfile.c_str());
     }
