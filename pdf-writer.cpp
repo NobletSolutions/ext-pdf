@@ -12,13 +12,12 @@
 #include <PDFWriter/PDFUsedFont.h>
 #include <sys/stat.h>
 #include <iostream>
+#include <fstream>
 #include <iterator>
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
-#include <experimental/filesystem>
-#include <cstdio>
 
 #include "pdf-text.h"
 
@@ -220,7 +219,11 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
     if (!params.empty()) {
         std::string tempfile = std::tmpnam(nullptr);
-        std::experimental::filesystem::copy_file(std::experimental::filesystem::path(_outputFileName),std::experimental::filesystem::path(tempfile));
+
+        std::ifstream  src(_outputFileName.c_str(), std::ios::binary);
+        std::ofstream  dst(tempfile.c_str(), std::ios::binary);
+
+        dst << src.rdbuf();
 
         PDFPageRange pageRange;
 
