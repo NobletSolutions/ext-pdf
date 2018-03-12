@@ -235,9 +235,9 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             found = iter.second.stringValue().find('-');
             if(found != std::string::npos) {
                 std::vector<std::string> v = split(iter.second.stringValue(), '-');
-                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz),std::stol (v[1],&sz)));
+                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz)-1,std::stol (v[1],&sz)-1));
             } else {
-                long li_dec = std::stol(iter.second.stringValue(),&sz);
+                long li_dec = std::stol(iter.second.stringValue(),&sz)-1;
                 pageRange.mSpecificRanges.push_back(ULongAndULong(li_dec,li_dec));
             }
         }
