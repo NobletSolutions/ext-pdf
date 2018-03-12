@@ -61,7 +61,9 @@ extern "C" {
             Php::ByVal("modifications",Php::Type::Array)
         });
 
-        pdfWriter.method<&PdfWriter::writePdf>("save");
+        pdfWriter.method<&PdfWriter::writePdf>("save",{
+                Php::ByVal("ranges", Php::Type::Array, false)
+            });
 
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");
         PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Private);

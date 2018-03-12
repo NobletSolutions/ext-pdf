@@ -31,11 +31,13 @@ private:
     AbstractContentContext::TextOptions * defaultText;
     int64_t pageNum;
     AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10);
+    std::string _inputFileName;
+    std::string _outputFileName;
 public:
     PdfWriter();
     void __construct(Php::Parameters &params);
     void writeTextToPage(Php::Parameters &params);
-    void writePdf();
+    void writePdf(Php::Parameters &params);
     void setFont(Php::Parameters &params);
     Php::Value getAllFonts();
 };

@@ -17,6 +17,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <experimental/filesystem>
+#include <cstdio>
 
 #include "pdf-text.h"
 
@@ -111,7 +113,9 @@ void PdfWriter::__construct(Php::Parameters &params) {
         throw Php::Exception("File doesn't exist?");
     }
 
-    writer.ModifyPDF(params[0], ePDFVersion14, params[1]);
+    _inputFileName.assign(params[0].stringValue());
+    _outputFileName.assign(params[1].stringValue());
+    writer.ModifyPDF(_inputFileName, ePDFVersion14, _outputFileName);
 
     initializeFonts();
 }
@@ -211,8 +215,35 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
     return;
 }
 
-void PdfWriter::writePdf() {
+void PdfWriter::writePdf(Php::Parameters &params) {
     writer.EndPDF();
+
+    if (!params.empty()) {
+        std::string tempfile = std::tmpnam(nullptr);
+        std::experimental::filesystem::copy_file(std::experimental::filesystem::path(_outputFileName),std::experimental::filesystem::path(tempfile));
+
+        PDFPageRange pageRange;
+
+        pageRange.mType = PDFPageRange::eRangeTypeSpecific;
+        std::size_t found = std::string::npos;
+        std::string::size_type sz;
+
+        for (auto &iter : params[0]) {
+            found = iter.second.stringValue().find('-');
+            if(found != std::string::npos) {
+                std::vector<std::string> v = split(iter.second.stringValue(), '-');
+                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz),std::stol (v[1],&sz)));
+            } else {
+                long li_dec = std::stol(iter.second.stringValue(),&sz);
+                pageRange.mSpecificRanges.push_back(ULongAndULong(li_dec,li_dec));
+            }
+        }
+
+        writer.StartPDF(_outputFileName, ePDFVersion14);
+        writer.AppendPDFPagesFromPDF(_inputFileName, pageRange);
+        writer.EndPDF();
+        std::remove(tempfile.c_str());
+    }
 }
 
 Php::Value PdfWriter::getAllFonts() {
