@@ -244,9 +244,11 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             }
         }
 
-        writer.StartPDF(_outputFileName, ePDFVersion14);
-        writer.AppendPDFPagesFromPDF(tempfile, pageRange);
-        writer.EndPDF();
+        // Need a second instance of the writer for encrypted documents to work
+        PDFWriter writer2;
+        writer2.StartPDF(_outputFileName, ePDFVersion14);
+        writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
+        writer2.EndPDF();
         std::remove(tempfile.c_str());
     }
 }
