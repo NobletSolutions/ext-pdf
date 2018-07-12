@@ -117,6 +117,7 @@ Php::Value PdfDocument::asString() {
 }
 
 static int _mkdir(const char *dir) {
+    struct stat buffer;
     char tmp[256];
     char *p = NULL;
     int status;
@@ -129,13 +130,16 @@ static int _mkdir(const char *dir) {
         tmp[len - 1] = 0;
     }
 
-    for(p = tmp + 1; *p; p++) {
+    for (p = tmp + 1; *p; p++) {
         if (*p == '/') {
             *p = 0;
-            status = mkdir(tmp, S_IRWXU);
-            if (status != 0) {
-                return -1;
-            }
+	    if (stat(tmp, &buffer) == -1) {
+                status = mkdir(tmp, S_IRWXU);
+                if (status != 0) {
+                    Php::error << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::endl;
+                    return -1;
+                }
+	    }
             *p = '/';
         }
     }
@@ -182,7 +186,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     // Check that the directory exists
     if (stat (_dirname, &buffer) == -1) {
         if (_mkdir(_dirname) != 0) {
-            Php::error << "Unable to create dir " << _dirname << " " << strerror(errno) << std::endl;
+            Php::error << "PHP-PDF: Unable to create dir " << _dirname << " because '" << strerror(errno) << "'" << std::endl;
             throw Php::Exception("Unable to create dir");
         }
     }
@@ -217,14 +221,14 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
 
 PdfImageFormat * PdfDocument::getImageFormat(int inFormat) {
     switch (inFormat) {
-    case 2:
-        return png;
-        break;
-    case 3:
-        return tiff;
-    default:
-    case 1:
-        return jpeg;
+        case 2:
+            return png;
+            break;
+        case 3:
+            return tiff;
+        default:
+        case 1:
+            return jpeg;
     }
 
     return NULL;
