@@ -14,6 +14,7 @@
 #include "pdf-image-result.h"
 #include "pdf-image-format.h"
 #include <limits.h>
+#include <poppler-page.h>
 
 PdfDocument::PdfDocument() {
     jpeg = new PdfImageFormat("jpeg", "jpg");

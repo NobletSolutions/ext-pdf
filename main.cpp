@@ -5,9 +5,10 @@
 #include "pdf-image-format.h"
 #include "pdf-writer.h"
 #include "pdf-text.h"
+#include "pdf-image.h"
 
 #ifndef VERSION
-#define VERSION "0.8"
+#define VERSION "0.10"
 #endif
 
 /**
@@ -17,7 +18,7 @@ extern "C" {
     /**
      *  Function that is called by PHP right after the PHP process
      *  has started, and that returns an address of an internal PHP
-     *  strucure with all the details and features of your extension
+     *  structure with all the details and features of your extension
      *
      *  @return void*   a pointer to an address that is understood by PHP
      */
@@ -28,6 +29,23 @@ extern "C" {
         static Php::Extension extension("pdf", VERSION);
 
         Php::Namespace myNamespace("PDF");
+
+        // PdfImage Methods ========================
+        Php::Class<PdfImage> pdfImage("PdfImage");
+        pdfImage.method<&PdfImage::__construct>("__construct", {
+            Php::ByVal("x", Php::Type::Numeric),
+            Php::ByVal("y", Php::Type::Numeric),
+            Php::ByVal("imagepath", Php::Type::String),
+			Php::ByVal("index", Php::Type::Numeric, false),
+            Php::ByVal("width", Php::Type::Numeric, false),
+            Php::ByVal("height", Php::Type::Numeric, false)
+        });
+        pdfImage.method<&PdfImage::getX>("getX");
+        pdfImage.method<&PdfImage::getY>("getY");
+        pdfImage.method<&PdfImage::getIndex>("getIndex");
+        pdfImage.method<&PdfImage::getImagePath>("getImagePath");
+        pdfImage.method<&PdfImage::getWidth>("getWidth");
+        pdfImage.method<&PdfImage::getHeight>("getHeight");
 
         // PdfText Methods =========================
         Php::Class<PdfText> pdfText("PdfText");
@@ -58,7 +76,12 @@ extern "C" {
 
         pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage",{
             Php::ByVal("page",Php::Type::Numeric),
-            Php::ByVal("modifications",Php::Type::Array)
+            Php::ByVal("modifications", Php::Type::Array)
+        });
+
+        pdfWriter.method<&PdfWriter::writeImageToPage>("writeImageToPage",{
+            Php::ByVal("page",Php::Type::Numeric),
+            Php::ByVal("image","PDF\\PdfImage")
         });
 
         pdfWriter.method<&PdfWriter::writePdf>("save",{
@@ -105,6 +128,7 @@ extern "C" {
         myNamespace.add(PdfImageResult);
         myNamespace.add(pdfDocument);
         myNamespace.add(pdfText);
+        myNamespace.add(pdfImage);
         myNamespace.add(pdfWriter);
         extension.add(myNamespace);
 

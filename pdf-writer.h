@@ -14,6 +14,9 @@
 #include <PDFWriter/PDFPage.h>
 #include <PDFWriter/PDFObject.h>
 #include <PDFWriter/AbstractContentContext.h>
+#include <unordered_map>
+#include "pdf-image.h"
+#include "pdf-text.h"
 
 void initializeFonts();
 std::vector<std::string> getFonts();
@@ -22,21 +25,26 @@ Php::Value fonts();
 class PdfWriter : public Php::Base {
 private:
     PDFWriter writer;
-    PDFModifiedPage * modifiedPage;
-    PDFObject * page;
-    AbstractContentContext * contentContext;
-    AbstractContentContext::TextOptions * textOptions;
+    PDFModifiedPage * modifiedPage = NULL;
+    PDFObject * page;// = NULL;
+    AbstractContentContext * contentContext;// = NULL;
+    AbstractContentContext::TextOptions * textOptions;// = NULL;
     std::string defaultFontName;
-    PDFUsedFont * defaultFont = NULL;
-    AbstractContentContext::TextOptions * defaultText;
-    int64_t pageNum;
+    PDFUsedFont * defaultFont;// = NULL;
+    AbstractContentContext::TextOptions * defaultText;// = NULL;
+    int64_t pageNum = -1;
     AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10);
     std::string _inputFileName;
     std::string _outputFileName;
+    std::unordered_map<double,std::vector<PdfImage*>> pageImages;
+    std::unordered_map<double,std::vector<PdfText*>> pageText;
+    void writeText(PdfText *obj, AbstractContentContext *contentContext);
+    void writeImage(PdfImage *image, AbstractContentContext *contentContext);
 public:
     PdfWriter();
     void __construct(Php::Parameters &params);
     void writeTextToPage(Php::Parameters &params);
+    void writeImageToPage(Php::Parameters &params);
     void writePdf(Php::Parameters &params);
     void setFont(Php::Parameters &params);
     Php::Value getAllFonts();

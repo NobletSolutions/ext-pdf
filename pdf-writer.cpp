@@ -10,6 +10,7 @@
 #include <fontconfig/fontconfig.h>
 #include <PDFWriter/EPDFVersion.h>
 #include <PDFWriter/PDFUsedFont.h>
+#include <phpcpp.h>
 #include <sys/stat.h>
 #include <iostream>
 #include <fstream>
@@ -20,6 +21,8 @@
 #include <vector>
 
 #include "pdf-text.h"
+#include "pdf-image.h"
+
 
 std::map<std::string,std::string> allFonts;
 std::vector<std::string> split(const std::string& s, char delimiter)
@@ -37,7 +40,7 @@ std::vector<std::string> split(const std::string& s, char delimiter)
 
 void initializeFonts() {
     if (allFonts.size() > 0) {
-	    return;
+        return;
     }
 
     const FcChar8 *format = NULL;
@@ -146,8 +149,8 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         return options;
     }
 
-    //Php::out << "Tried to get font: "<< requestedFont << std::endl;
-    throw Php::Exception("No such Font");
+//    Php::out << "No such font: " << requestedFont << std::endl;
+    throw Php::Exception("No such font");
 }
 
 void PdfWriter::setFont(Php::Parameters &params) {
@@ -159,64 +162,182 @@ void PdfWriter::setFont(Php::Parameters &params) {
     }
 }
 
+void PdfWriter::writeImageToPage(Php::Parameters &params) {
+    if (params[0] < 0) {
+        throw Php::Exception("Cannot write to a negative page");
+    }
+
+    double pageIndex = params[0];
+
+    PdfImage *image = new PdfImage(*(PdfImage *)params[1].implementation());
+
+    auto search = pageImages.find(pageIndex);
+    if (search != pageImages.end()) {
+//        Php::out << "["<< pageIndex << "] Added (pushed) " << image->getImagePath() << std::endl;
+        search->second.push_back(image);
+    } else {
+//        Php::out << "["<< pageIndex << "] Added (new) " << image->getImagePath() << std::endl;
+
+        std::vector<PdfImage*> v = {image};
+        pageImages.insert({pageIndex,v});
+    }
+}
+
 void PdfWriter::writeTextToPage(Php::Parameters &params) {
     if (params[0] < 0) {
         throw Php::Exception("Cannot write to a negative page");
     }
 
-    if (params[1].size() > 0) {
-        PDFModifiedPage thePage(&writer, static_cast<double>(params[0]), true);
-        AbstractContentContext* contentContext = thePage.StartContentContext();
+    if (!defaultText) {
+        throw Php::Exception("No font set!");
+    }
 
-        if (!defaultText) {
-            throw Php::Exception("No font set!");
+    if (params[1].size() > 0) {
+        double pageIndex = params[0];
+
+        auto search = pageText.find(pageIndex);
+        if (search != pageText.end()) {
+//            Php::out <<"["<< pageIndex << "] Added (pushed) " << params[1].size() << " text(s)" << std::endl;
+
+            for (auto &iter : params[1]) {
+                PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
+//                Php::out << "\t" << obj->getText() << std::endl;
+                search->second.push_back(obj);
+            }
+        } else {
+            std::vector<PdfText*> v;
+//            Php::out <<"["<< pageIndex << "] Added (new) " << params[1].size() << " text(s)" << std::endl;
+
+            for (auto &iter : params[1]) {
+                PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
+//                Php::out << "\t" << obj->getText() << std::endl;
+                v.push_back(obj);
+            }
+
+            pageText.insert({pageIndex,v});
         }
 
-        AbstractContentContext::TextOptions * options;
+        return;
+    }
+
+    return;
+}
+
+void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext)
+{
+//    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
+    AbstractContentContext::TextOptions * options;
+
+    if (obj->getFontSize() || obj->getFont() ) {
+        int _fontSize = 10;
+        std::string fontName(obj->getFont().stringValue());
+        if(obj->getFontSize()) {
+            _fontSize = (int)obj->getFontSize();
+        }
+
+        if (fontName.empty()){
+            fontName.assign(defaultFontName);
+        }
+
+//        Php::out << "Setting font " << fontName << std::endl;
+        options = this->getFont(fontName, _fontSize);
+    } else {
+        options = defaultText;
+    }
+
+    if (obj->getText().stringValue().find("\n") != std::string::npos) {
+        std::vector<std::string> tokens = split(obj->getText().stringValue(),'\n');
+        double lineHeight = 0;
+        PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H",14);
+
+        for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
+            contentContext->WriteText((double) obj->getX(), (double) obj->getY()-lineHeight, *it, *options);
+            lineHeight += textDimensions.height;
+        }
+    }
+
+    contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
+}
+
+void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext)
+{
+    if (image->getWidth() > 0 || image->getIndex() > 0) {
+        AbstractContentContext::ImageOptions opt;
+        opt.transformationMethod = AbstractContentContext::eFit;
+        opt.fitProportional = true;
+
+        if (image->getWidth() > 0) {
+            opt.boundingBoxWidth = image->getWidth();
+            opt.boundingBoxHeight = image->getHeight();
+        }
+
+        if (image->getIndex() > 0) {
+            opt.imageIndex = (double)image->getIndex();
+        }
+
+        contentContext->DrawImage((double)image->getX(), (double)image->getY(), image->getImagePath(), opt);
+
+        return;
+    }
+
+    contentContext->DrawImage((double)image->getX(), (double)image->getY(), image->getImagePath());
+}
+
+void PdfWriter::writePdf(Php::Parameters &params) {
+    // Iterate and print keys and values of unordered_map
+    for (const auto &n : pageText ) {
+//        Php::out << "PageText: [" << n.first << "] TextCount: [" << n.second.size() << "]\n";
+
+        PDFModifiedPage thePage(&writer, n.first, true);
+        AbstractContentContext* contentContext = thePage.StartContentContext();
 
         // iterate over each PdfText point
-        for (auto &iter : params[1]) {
-            PdfText *obj = (PdfText *) iter.second.implementation();
+        for (const auto &iter : n.second) {
+            this->writeText(iter, contentContext);
+            delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
+        }
 
-            if (obj->getFontSize() || obj->getFont() ) {
-                int _fontSize = 10;
-                std::string fontName(obj->getFont().stringValue());
-                if(obj->getFontSize()) {
-                    _fontSize = (int)obj->getFontSize();
-                }
+        // see if there are images destined for this page and write them at the same time
+        auto images = pageImages.find(n.first);
 
-                if(fontName.empty()){
-                    fontName.assign(defaultFontName);
-                }
+        if (images != pageImages.end()) {
+//            Php::out << "Have Images: " << images->second.size() << std::endl;
 
-                options = this->getFont(fontName, _fontSize);
-            } else {
-                options = defaultText;
+            for (const auto& i : images->second) {
+//                Php::out << "\tImage: [" << i->getImagePath() << "]\n";
+                this->writeImage(i,contentContext);
+                delete i;
             }
 
-            if (obj->getText().stringValue().find("\n") != std::string::npos) {
-                std::vector<std::string> tokens = split(obj->getText().stringValue(),'\n');
-                double lineHeight = 0;
-                PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H",14);
+            pageImages.erase(images);
+        }
 
-                for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
-                    contentContext->WriteText((double) obj->getX(), (double) obj->getY()-lineHeight, *it, *options);
-                    lineHeight += textDimensions.height;
-                }
-                continue;
-            }
+        thePage.EndContentContext();
+        thePage.WritePage();
+//        pageText.erase(n.first);
+    }
 
-            contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
+//    Php::out << "Image Pages Left: " << pageImages.size() << std::endl;
+
+    for( const auto& i : pageImages ) {
+        PDFModifiedPage thePage(&writer, i.first, true);
+        AbstractContentContext* contentContext = thePage.StartContentContext();
+
+//        Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
+
+        for (const auto& image : i.second) {
+//            Php::out << "\tImage: [" << image->getImagePath() << "]\n";
+            this->writeImage(image, contentContext);
+            delete image;
         }
 
         thePage.EndContentContext();
         thePage.WritePage();
     }
 
-    return;
-}
+    pageText.clear();
+    pageImages.clear();
 
-void PdfWriter::writePdf(Php::Parameters &params) {
     writer.EndPDF();
 
     if (!params.empty()) {
@@ -237,10 +358,10 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             found = iter.second.stringValue().find('-');
             if(found != std::string::npos) {
                 std::vector<std::string> v = split(iter.second.stringValue(), '-');
-                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz)-1,std::stol (v[1],&sz)-1));
+                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz)-1, std::stol (v[1],&sz)-1));
             } else {
-                long li_dec = std::stol(iter.second.stringValue(),&sz)-1;
-                pageRange.mSpecificRanges.push_back(ULongAndULong(li_dec,li_dec));
+                long li_dec = std::stol(iter.second.stringValue(),&sz) - 1;
+                pageRange.mSpecificRanges.push_back(ULongAndULong(li_dec, li_dec));
             }
         }
 
