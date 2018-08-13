@@ -25,6 +25,20 @@ void PdfText::__construct(Php::Parameters &params) {
     }
 }
 
+PdfText::PdfText(const PdfText &obj) {
+	x = obj.x;
+	y = obj.y;
+	text = obj.text;
+
+	if (obj.fontSize) {
+		fontSize = obj.fontSize;
+	}
+
+	if (!obj.font.empty()) {
+		font = obj.font;
+	}
+}
+
 Php::Value PdfText::getX() {
     return x;
 }

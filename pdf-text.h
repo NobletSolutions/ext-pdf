@@ -12,13 +12,14 @@
 
 class PdfText : public Php::Base {
 private:
-    int64_t x;
-    int64_t y;
+    int64_t x = 0;
+    int64_t y = 0;
     int64_t fontSize = 10;
     std::string text;
     std::string font;
 public:
     PdfText();
+    PdfText(const PdfText &obj);
     void __construct(Php::Parameters &params);
     Php::Value getX();
     Php::Value getY();
