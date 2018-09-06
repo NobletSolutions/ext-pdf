@@ -254,6 +254,8 @@ void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext)
             contentContext->WriteText((double) obj->getX(), (double) obj->getY()-lineHeight, *it, *options);
             lineHeight += textDimensions.height;
         }
+
+	return;
     }
 
     contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
