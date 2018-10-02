@@ -23,10 +23,8 @@
 #include "pdf-text.h"
 #include "pdf-image.h"
 
-
 std::map<std::string,std::string> allFonts;
-std::vector<std::string> split(const std::string& s, char delimiter)
-{
+std::vector<std::string> split(const std::string& s, char delimiter) {
    std::vector<std::string> tokens;
    std::string token;
    std::istringstream tokenStream(s);
@@ -81,7 +79,7 @@ void initializeFonts() {
                 // This is a hack since our Regular style filter is returning multiple fonts.
                 // So if the font name has only one name we expect its the 'regular' typeface as well
                 // I need a better way to use fc-list / library to only get the Regular style typeface
-                if (fontNames.size() == 1) { 
+                if (fontNames.size() == 1) {
                     tokens[1].erase(tokens[1].begin(), tokens[1].begin()+5);
                     allFonts.insert(std::make_pair(fontNames[0], tokens[1]));
                 }
@@ -92,7 +90,7 @@ void initializeFonts() {
     FcFini ();
 }
 
-std::vector<std::string> getFonts(){
+std::vector<std::string> getFonts() {
     if (allFonts.empty()) {
         initializeFonts();
     }
@@ -124,15 +122,13 @@ void PdfWriter::__construct(Php::Parameters &params) {
     initializeFonts();
 }
 
-AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize)
-{
+AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize) {
     AbstractContentContext::TextOptions * options;
     std::map<std::string,std::string>::iterator it;
     struct stat buffer;
     PDFUsedFont * _font;
 
     it = allFonts.find(requestedFont);
-
     if (it != allFonts.end()) {
         // Check that the font file exists
         if (stat (it->second.c_str(), &buffer) == -1) {
@@ -145,7 +141,6 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         }
 
         options = new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, 0);
-
         return options;
     }
 
@@ -223,8 +218,7 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
     return;
 }
 
-void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext)
-{
+void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext) {
 //    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
     AbstractContentContext::TextOptions * options;
 
@@ -255,14 +249,13 @@ void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext)
             lineHeight += textDimensions.height;
         }
 
-	return;
+		return;
     }
 
     contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
 }
 
-void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext)
-{
+void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext) {
     if (image->getWidth() > 0 || image->getIndex() > 0) {
         AbstractContentContext::ImageOptions opt;
         opt.transformationMethod = AbstractContentContext::eFit;
@@ -293,53 +286,53 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         PDFModifiedPage thePage(&writer, n.first, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
-        // iterate over each PdfText point
-        for (const auto &iter : n.second) {
-            this->writeText(iter, contentContext);
-            delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
-        }
+        if (contentContext) {
+			// iterate over each PdfText point
+			for (const auto &iter : n.second) {
+				this->writeText(iter, contentContext);
+				//Php::out << "Delete iter" << std::endl;
+				delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
+			}
 
-        // see if there are images destined for this page and write them at the same time
-        auto images = pageImages.find(n.first);
+			// see if there are images destined for this page and write them at the same time
+			auto images = pageImages.find(n.first);
 
-        if (images != pageImages.end()) {
-//            Php::out << "Have Images: " << images->second.size() << std::endl;
+			if (images != pageImages.end()) {
+				//Php::out << "Have Images: " << images->second.size() << std::endl;
 
-            for (const auto& i : images->second) {
-//                Php::out << "\tImage: [" << i->getImagePath() << "]\n";
-                this->writeImage(i,contentContext);
-                delete i;
-            }
+				for (const auto& i : images->second) {
+					//Php::out << "\tImage: [" << i->getImagePath() << "]\n";
+					this->writeImage(i,contentContext);
+					delete i;
+				}
 
-            pageImages.erase(images);
-        }
+				pageImages.erase(images);
+			}
 
-        thePage.EndContentContext();
-        thePage.WritePage();
-//        pageText.erase(n.first);
-    }
+			thePage.EndContentContext();
+		}
+
+		thePage.WritePage();
+	}
 
 //    Php::out << "Image Pages Left: " << pageImages.size() << std::endl;
-
     for( const auto& i : pageImages ) {
         PDFModifiedPage thePage(&writer, i.first, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
+        if (contentContext) {
+			// Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
+			for (const auto& image : i.second) {
+				this->writeImage(image, contentContext);
+				delete image;
+			}
+			thePage.EndContentContext();
+		}
 
-//        Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
-
-        for (const auto& image : i.second) {
-//            Php::out << "\tImage: [" << image->getImagePath() << "]\n";
-            this->writeImage(image, contentContext);
-            delete image;
-        }
-
-        thePage.EndContentContext();
-        thePage.WritePage();
+		thePage.WritePage();
     }
 
     pageText.clear();
     pageImages.clear();
-
     writer.EndPDF();
 
     if (!params.empty()) {
@@ -379,4 +372,3 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 Php::Value PdfWriter::getAllFonts() {
     return getFonts();
 }
-
