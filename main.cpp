@@ -128,6 +128,8 @@ extern "C" {
             Php::ByRef("document", "PDF\\PdfDocument", false)
         });
 
+	pdfDocument.method<&PdfDocument::hash>("hashContent");
+
         myNamespace.add<fonts>("getFonts");
         myNamespace.add(PdfImageResult);
         myNamespace.add(pdfDocument);

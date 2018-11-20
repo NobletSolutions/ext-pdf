@@ -44,6 +44,7 @@ public:
     Php::Value asString();
     Php::Value toImage(Php::Parameters &params);
     Php::Value compare(Php::Parameters &params);
+    Php::Value hash(Php::Parameters &params);
 private:
     PdfImageFormat * getImageFormat(int inFormat);
 };

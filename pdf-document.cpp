@@ -15,6 +15,7 @@
 #include "pdf-image-format.h"
 #include <limits.h>
 #include <poppler-page.h>
+#include <openssl/sha.h>
 
 static int _mkdir(const char *dir) {
     struct stat buffer;
@@ -218,6 +219,44 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     }
 
     return returnValue;
+}
+
+Php::Value PdfDocument::hash(Php::Parameters &params) {
+    char mdString[SHA_DIGEST_LENGTH*2+1];
+    unsigned char md[SHA_DIGEST_LENGTH];
+
+    poppler::page *page;
+    poppler::ustring pageData;
+    poppler::byte_array arr;
+
+    int lastPage = _document->pages();
+
+    SHA_CTX context;
+    if (!SHA1_Init(&context)) {
+        Php::error << "Unable to initialize openssl context" << std::endl;
+        return -1;
+    }
+
+    for (int x = 0; x < lastPage; x++) {
+        page = _document->create_page(x);
+        pageData = page->text(page->page_rect(poppler::media_box));
+        arr =  pageData.to_utf8();
+        if (!SHA1_Update(&context, (unsigned char*)&arr[0], arr.size())) {
+	    Php::error << "Unable to add data to hash context" << std::endl;
+	    return -1;
+        }
+    }
+
+    if (!SHA1_Final(md,&context)) {
+        Php::error << "Unable to finalize hash" << std::endl;
+        return -1;
+    }
+
+    for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
+       sprintf(&mdString[i*2], "%02x", (unsigned int)md[i]);
+    }
+
+    return mdString;
 }
 
 Php::Value PdfDocument::compare(Php::Parameters &params) {
