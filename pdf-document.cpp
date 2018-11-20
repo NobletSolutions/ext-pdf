@@ -16,6 +16,38 @@
 #include <limits.h>
 #include <poppler-page.h>
 
+static int _mkdir(const char *dir) {
+    struct stat buffer;
+    char tmp[256];
+    char *p = NULL;
+    int status;
+    size_t len;
+
+    snprintf(tmp, sizeof(tmp),"%s",dir);
+    len = strlen(tmp);
+
+    if (tmp[len - 1] == '/') {
+        tmp[len - 1] = 0;
+    }
+
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+	    if (stat(tmp, &buffer) == -1) {
+                status = mkdir(tmp, S_IRWXU);
+                if (status != 0) {
+                    Php::error << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::endl;
+                    return -1;
+                }
+	    }
+            *p = '/';
+        }
+    }
+
+    mkdir(tmp, S_IRWXU);
+    return 0;
+}
+
 PdfDocument::PdfDocument() {
     jpeg = new PdfImageFormat("jpeg", "jpg");
     png = new PdfImageFormat("png", "png");
@@ -117,38 +149,6 @@ Php::Value PdfDocument::asString() {
     return resultData;
 }
 
-static int _mkdir(const char *dir) {
-    struct stat buffer;
-    char tmp[256];
-    char *p = NULL;
-    int status;
-    size_t len;
-
-    snprintf(tmp, sizeof(tmp),"%s",dir);
-    len = strlen(tmp);
-
-    if (tmp[len - 1] == '/') {
-        tmp[len - 1] = 0;
-    }
-
-    for (p = tmp + 1; *p; p++) {
-        if (*p == '/') {
-            *p = 0;
-	    if (stat(tmp, &buffer) == -1) {
-                status = mkdir(tmp, S_IRWXU);
-                if (status != 0) {
-                    Php::error << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::endl;
-                    return -1;
-                }
-	    }
-            *p = '/';
-        }
-    }
-
-    mkdir(tmp, S_IRWXU);
-    return 0;
-}
-
 Php::Value PdfDocument::toImage(Php::Parameters &params) {
     int firstPage = 0;
     int lastPage = _document->pages();
@@ -218,6 +218,64 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     }
 
     return returnValue;
+}
+
+Php::Value PdfDocument::compare(Php::Parameters &params) {
+    PdfDocument *document = (PdfDocument *)params[0].implementation();
+
+    poppler::page *localPage;
+    poppler::page *externalPage;
+    poppler::ustring localPageData;
+    poppler::ustring externalPageData;
+
+    poppler::byte_array localPageText_arr;
+    poppler::byte_array externalPageText_arr;
+
+    char *localPageText_str;
+    char *externalPageText_str;
+
+    int textDifference = 0;
+
+    int count = _document->pages();
+    if (count != document->_document->pages()) {
+        return 10;
+    }
+
+    for (int pageNum = 0; pageNum < count; ++pageNum) {
+        localPage = _document->create_page(pageNum);
+        if (!localPage) {
+            Php::error << "PHP-PDF: Failed to read local page" << pageNum+1 << std::endl;
+
+            return -1;
+        }
+
+        externalPage = document->_document->create_page(pageNum);
+        if (!externalPage) {
+            Php::error << "PHP-PDF: Failed to read " << pageNum+1 << std::endl;
+
+            return -1;
+        }
+
+        localPageData = localPage->text();
+        externalPageData = externalPage->text();
+
+        if (localPageData.length() != externalPageData.length()) {
+            return 12;
+        }
+
+        localPageText_arr = localPageData.to_utf8();
+        localPageText_str = &localPageText_arr[0];
+
+        externalPageText_arr = externalPageData.to_utf8();
+        externalPageText_str = &externalPageText_arr[0];
+
+        textDifference = std::memcmp(localPageText_str, externalPageText_str, localPageData.length());
+        if (textDifference != 0) {
+            return 13;
+        }
+    }
+
+    return 0;
 }
 
 PdfImageFormat * PdfDocument::getImageFormat(int inFormat) {

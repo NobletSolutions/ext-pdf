@@ -124,6 +124,10 @@ extern "C" {
             Php::ByVal("dpi", Php::Type::Numeric,false)
         });
 
+        pdfDocument.method<&PdfDocument::compare>("compare", {
+            Php::ByRef("document", "PDF\\PdfDocument", false)
+        });
+
         myNamespace.add<fonts>("getFonts");
         myNamespace.add(PdfImageResult);
         myNamespace.add(pdfDocument);

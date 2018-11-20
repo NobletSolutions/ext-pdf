@@ -10,7 +10,7 @@
 
 #include <phpcpp.h>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 #include <poppler-document.h>
 #include <poppler-page.h>
 #include <poppler-image.h>
@@ -21,7 +21,7 @@
 #include "pdf-image-result.h"
 
 class PdfDocument: public Php::Base {
-private:
+protected:
     int _major = 0;
     int _minor = 0;
     poppler::document *_document = NULL;
@@ -43,7 +43,7 @@ public:
     Php::Value numberOfPages();
     Php::Value asString();
     Php::Value toImage(Php::Parameters &params);
-
+    Php::Value compare(Php::Parameters &params);
 private:
     PdfImageFormat * getImageFormat(int inFormat);
 };
