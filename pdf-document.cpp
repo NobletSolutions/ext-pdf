@@ -184,7 +184,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     params[1].stringValue().copy(pattern,params[1].size(),0);
 
     char * _dirname = dirname(pattern);
-    Php::out << "Attempting to create dir: " << _dirname << std::endl;
+    // Php::out << "Attempting to create dir: " << _dirname << std::endl;
     // Check that the directory exists
     if (stat (_dirname, &buffer) == -1) {
         if (_mkdir(_dirname) != 0) {
