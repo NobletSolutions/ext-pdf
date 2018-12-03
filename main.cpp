@@ -85,8 +85,13 @@ extern "C" {
         });
 
         pdfWriter.method<&PdfWriter::writePdf>("save",{
-                Php::ByVal("ranges", Php::Type::Array, false)
-            });
+            Php::ByVal("ranges", Php::Type::Array, false)
+        });
+
+        pdfWriter.method<&PdfWriter::combine>("combine",{
+            Php::ByVal("documents", Php::Type::Array),
+            Php::ByRef("destination", Php::Type::String),
+        });
 
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");
         PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Private);

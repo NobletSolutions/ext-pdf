@@ -48,6 +48,7 @@ public:
     void writePdf(Php::Parameters &params);
     void setFont(Php::Parameters &params);
     Php::Value getAllFonts();
+    static Php::Value combine(Php::Parameters &params);
 };
 
 #endif /* PDF_WRITER_H_ */

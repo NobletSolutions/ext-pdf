@@ -372,3 +372,54 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 Php::Value PdfWriter::getAllFonts() {
     return getFonts();
 }
+
+static Php::Value PdfWriter::combine(PhpParameters &params) {
+    std::string destinationFile = params[0];
+
+    EStatusCode status = eSuccess;
+    PDFDocumentCopyingContext* copyingContext = NULL;
+
+    // Change 3rd page bbox to landscape by modifying the page object
+    PDFDocumentCopyingContext* copyingContext = inPDFWriter->CreatePDFCopyingContextForModifiedFile();
+
+    if (!copyingContext) {
+        Php::out << "failed to create copying context for modified file" << std::endl;
+        status = eFailure;
+        return nullptr;
+    }
+
+    // create a new object for the page, copy all but media box, which will be changed
+    ObjectIDType pageId                     = copyingContext->GetSourceDocumentParser()->GetPageObjectID(2);
+    PDFObjectCastPtr<PDFDictionary> pageObj = copyingContext->GetSourceDocumentParser()->ParsePage(2);
+
+    MapIterator<PDFNameToPDFObjectMap> pageObjIt = pageObj->GetIterator();
+
+    inPDFWriter->GetObjectsContext().StartModifiedIndirectObject(pageId);
+    DictionaryContext* modifiedPageObject = inPDFWriter->GetObjectsContext().StartDictionary();
+
+    while (pageObjIt.MoveNext()) {
+        if (pageObjIt.GetKey()->GetValue() != "MediaBox") {
+            modifiedPageObject->WriteKey(pageObjIt.GetKey()->GetValue());
+            copyingContext->CopyDirectObjectAsIs(pageObjIt.GetValue());
+        }
+    }
+
+    // write new media box
+    modifiedPageObject->WriteKey("MediaBox");
+    inPDFWriter->GetObjectsContext().StartArray();
+    inPDFWriter->GetObjectsContext().WriteInteger(0);
+    inPDFWriter->GetObjectsContext().WriteInteger(0);
+    inPDFWriter->GetObjectsContext().WriteInteger(500);
+    inPDFWriter->GetObjectsContext().WriteInteger(500);
+    inPDFWriter->GetObjectsContext().EndArray();
+    inPDFWriter->GetObjectsContext().EndLine();
+
+    inPDFWriter->GetObjectsContext().EndDictionary(modifiedPageObject);
+    inPDFWriter->GetObjectsContext().EndIndirectObject();
+    // done changing page box (ok...that seemed like a lot of work for this...humff)
+
+    // cleanup
+    delete copyingContext;
+
+    return status;
+}
