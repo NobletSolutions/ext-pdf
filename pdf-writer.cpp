@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-//#include <magic.h>
 
 #include "pdf-text.h"
 #include "pdf-image.h"
@@ -381,14 +380,47 @@ inline bool file_exists(const std::string &filename ) {
 	struct stat statBuffer;
 	return (stat(filename.c_str(), &statBuffer) == 0);
 }
+/*
+_Entry('application/pdf', ['%PDF'], []),
+    # jpg, jpeg, png, gif
+    _Entry('image/jpeg', ['\xFF\xD8\xFF\xE0', '\xFF\xD8\xFF\xE2', '\xFF\xD8\xFF\xE3', '\xFF\xD8\xFF\xE1'], []),
+    _Entry('image/png', ['\x89PNG\r\n\x1A\n'], []),
+    _Entry('image/gif', ['GIF87a', 'GIF89a'], []),
+*/
+const int UNSUPPORTED_TYPE = 0;
+const int PDF_TYPE = 1;
+const int IMAGE_TYPE = 2;
+
+int determineMimeType(const std::string &filename) {
+	std::fstream file(filename, std::ios::in | std::ios::binary);
+	char buffer[32];
+	file.read(buffer, 31);
+	file.close();
+
+	if (strstr(buffer, "%PDF")) {
+		return PDF_TYPE;
+	}
+	
+	//jpg
+	if (strstr(buffer, "\xFF\xD8\xFF\xE0") || 
+		strstr(buffer, "\xFF\xD8\xFF\xE2") || 
+		strstr(buffer, "\xFF\xD8\xFF\xE3") || 
+		strstr(buffer, "\xFF\xD8\xFF\xE1")) {
+		return IMAGE_TYPE;
+	}
+	
+	//png
+	if (strstr(buffer, "\x89PNG\r\n\x1A\n")) {
+		return IMAGE_TYPE;
+	}
+	
+	return UNSUPPORTED_TYPE;
+}
 
 Php::Value PdfWriter::combine(Php::Parameters &params) {
     std::string destinationFile = params[1];
 	PDFWriter pdfWriter;
 	PDFParser* parser = NULL;
-
-	//const char *mime;
-	//magic_t magic;
 
 	unsigned long pagesCount;
 	double width;
@@ -396,11 +428,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
 
 	const double PAGE_WIDTH = 612;
 	const double PAGE_HEIGHT = 792;
-
-	// initialize Mime detection
-	//magic = magic_open(MAGIC_MIME_TYPE);
-	//magic_load(magic, NULL);
-	//magic_compile(magic, NULL);
 
 	//Php::out << "Creating " << destinationFile << std::endl;
 	pdfWriter.StartPDF(destinationFile, ePDFVersion17);
@@ -411,11 +438,12 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
 		{
 			//Php::out << "\tWith: " << iter.second.stringValue() << std::endl;
 
-			//mime = magic_file(magic, iter.second.stringValue().c_str());
-			//Php::out << "Mime: " << mime << std::endl;
-			const auto ext = iter.second.stringValue().substr(iter.second.stringValue().find_last_of(".") + 1);
-			//Php::out << "Ext: " << ext << std::endl;
-			if (ext == "pdf") {
+			int mime = determineMimeType(iter.second.stringValue());
+			if(mime == UNSUPPORTED_TYPE) {
+				return false;
+			}
+
+			if (PDF_TYPE == mime) {
 				copyingContext = pdfWriter.CreatePDFCopyingContext(iter.second.stringValue());
 				if (copyingContext)
 				{
@@ -483,7 +511,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
 				pdfWriter.EndPageContentContext(cxt);
 				pdfWriter.WritePageAndRelease(page);
 			}
-
 		} else {
 			pdfWriter.EndPDF();
 			//Php::out << "\t " << iter.second.stringValue() << " doesn't exist!" << std::endl;
@@ -493,6 +520,5 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
 
 	pdfWriter.EndPDF();
 
-	//magic_close(magic);
 	return true;
 }
