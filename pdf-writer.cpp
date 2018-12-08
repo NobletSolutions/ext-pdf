@@ -8,6 +8,7 @@
 #include "pdf-writer.h"
 
 #include <fontconfig/fontconfig.h>
+#include <PDFWriter/EStatusCode.h>
 #include <PDFWriter/EPDFVersion.h>
 #include <PDFWriter/PDFUsedFont.h>
 #include <PDFWriter/PDFDocumentCopyingContext.h>
@@ -115,12 +116,17 @@ PdfWriter::PdfWriter() = default;
 void PdfWriter::__construct(Php::Parameters &params) {
     struct stat buffer;
     if (stat (params[0], &buffer) != 0) {
+    Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
         throw Php::Exception("File doesn't exist?");
     }
 
     _inputFileName.assign(params[0].stringValue());
     _outputFileName.assign(params[1].stringValue());
-    writer.ModifyPDF(_inputFileName, ePDFVersion14, _outputFileName);
+    EStatusCode status = writer.ModifyPDF(_inputFileName, ePDFVersion14, _outputFileName);
+    if (status != eSuccess) {
+        Php::warning << "Unable to open " << _inputFileName << std::flush;
+        throw Php::Exception("Unable to open file");
+    }
 
     initializeFonts();
 }
@@ -135,11 +141,14 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
     if (it != allFonts.end()) {
         // Check that the font file exists
         if (stat (it->second.c_str(), &buffer) == -1) {
+            Php::warning << "Font " << requestedFont << " does not exist" << std::flush;
             throw Php::Exception("Font doesn't exist");
         }
 
         _font = writer.GetFontForFile(it->second.c_str(), 0);
         if (!_font) {
+            Php::warning << "Unable to locate font " << requestedFont << std::flush;
+
             throw Php::Exception("Unable to locate font");
         }
 
@@ -147,7 +156,7 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         return options;
     }
 
-//    Php::out << "No such font: " << requestedFont << std::endl;
+    Php::warning << "No such font: " << requestedFont << std::endl;
     throw Php::Exception("No such font");
 }
 
@@ -162,6 +171,8 @@ void PdfWriter::setFont(Php::Parameters &params) {
 
 void PdfWriter::writeImageToPage(Php::Parameters &params) {
     if (params[0] < 0) {
+        Php::warning << "Unable to write to a negative page number" << std::flush;
+
         throw Php::Exception("Cannot write to a negative page");
     }
 
@@ -183,10 +194,13 @@ void PdfWriter::writeImageToPage(Php::Parameters &params) {
 
 void PdfWriter::writeTextToPage(Php::Parameters &params) {
     if (params[0] < 0) {
+        Php::warning << "Unable to write to a negative page number" << std::flush;
+
         throw Php::Exception("Cannot write to a negative page");
     }
 
     if (!defaultText) {
+        Php::warning << "No font set" << std::flush;
         throw Php::Exception("No font set!");
     }
 
@@ -252,7 +266,7 @@ void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext) 
             lineHeight += textDimensions.height;
         }
 
-		return;
+        return;
     }
 
     contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
@@ -290,54 +304,55 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
         if (contentContext) {
-			// iterate over each PdfText point
-			for (const auto &iter : n.second) {
-				this->writeText(iter, contentContext);
-				//Php::out << "Delete iter" << std::endl;
-				delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
-			}
+            // iterate over each PdfText point
+            for (const auto &iter : n.second) {
+                this->writeText(iter, contentContext);
+                //Php::out << "Delete iter" << std::endl;
+                delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
+            }
 
-			// see if there are images destined for this page and write them at the same time
-			auto images = pageImages.find(n.first);
+            // see if there are images destined for this page and write them at the same time
+            auto images = pageImages.find(n.first);
 
-			if (images != pageImages.end()) {
-				//Php::out << "Have Images: " << images->second.size() << std::endl;
+            if (images != pageImages.end()) {
+                //Php::out << "Have Images: " << images->second.size() << std::endl;
 
-				for (const auto& i : images->second) {
-					//Php::out << "\tImage: [" << i->getImagePath() << "]\n";
-					this->writeImage(i,contentContext);
-					delete i;
-				}
+                for (const auto& i : images->second) {
+                    //Php::out << "\tImage: [" << i->getImagePath() << "]\n";
+                    this->writeImage(i,contentContext);
+                    delete i;
+                }
 
-				pageImages.erase(images);
-			}
+                pageImages.erase(images);
+            }
 
-			thePage.EndContentContext();
-		}
+            thePage.EndContentContext();
+        }
 
-		thePage.WritePage();
-	}
+        thePage.WritePage();
+    }
 
 //    Php::out << "Image Pages Left: " << pageImages.size() << std::endl;
     for( const auto& i : pageImages ) {
         PDFModifiedPage thePage(&writer, i.first, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
         if (contentContext) {
-			// Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
-			for (const auto& image : i.second) {
-				this->writeImage(image, contentContext);
-				delete image;
-			}
-			thePage.EndContentContext();
-		}
+            // Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
+            for (const auto& image : i.second) {
+                this->writeImage(image, contentContext);
+                delete image;
+            }
+            thePage.EndContentContext();
+        }
 
-		thePage.WritePage();
+        thePage.WritePage();
     }
 
     pageText.clear();
     pageImages.clear();
     writer.EndPDF();
 
+    // requesting only particular pages
     if (!params.empty()) {
         std::string tempfile = std::tmpnam(nullptr);
 
@@ -365,8 +380,14 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
         // Need a second instance of the writer for encrypted documents to work
         PDFWriter writer2;
-        writer2.StartPDF(_outputFileName, ePDFVersion14);
-        writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
+    EStatusCode status;
+        status = writer2.StartPDF(_outputFileName, ePDFVersion14);
+    if (status != eSuccess) {
+            Php::warning << "Unable to open " << _outputFileName << std::flush;
+        throw Php::Exception("Unable to open file");
+    }
+
+    writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
         writer2.EndPDF();
         std::remove(tempfile.c_str());
     }
@@ -377,148 +398,150 @@ Php::Value PdfWriter::getAllFonts() {
 }
 
 inline bool file_exists(const std::string &filename ) {
-	struct stat statBuffer;
-	return (stat(filename.c_str(), &statBuffer) == 0);
+    struct stat statBuffer;
+    return (stat(filename.c_str(), &statBuffer) == 0);
 }
-/*
-_Entry('application/pdf', ['%PDF'], []),
-    # jpg, jpeg, png, gif
-    _Entry('image/jpeg', ['\xFF\xD8\xFF\xE0', '\xFF\xD8\xFF\xE2', '\xFF\xD8\xFF\xE3', '\xFF\xD8\xFF\xE1'], []),
-    _Entry('image/png', ['\x89PNG\r\n\x1A\n'], []),
-    _Entry('image/gif', ['GIF87a', 'GIF89a'], []),
-*/
+
 const int UNSUPPORTED_TYPE = 0;
 const int PDF_TYPE = 1;
 const int IMAGE_TYPE = 2;
 
 int determineMimeType(const std::string &filename) {
-	std::fstream file(filename, std::ios::in | std::ios::binary);
-	char buffer[32];
-	file.read(buffer, 31);
-	file.close();
+    std::fstream file(filename, std::ios::in | std::ios::binary);
+    char buffer[32];
+    file.read(buffer, 31);
+    file.close();
 
-	if (strstr(buffer, "%PDF")) {
-		return PDF_TYPE;
-	}
-	
-	//jpg
-	if (strstr(buffer, "\xFF\xD8\xFF\xE0") || 
-		strstr(buffer, "\xFF\xD8\xFF\xE2") || 
-		strstr(buffer, "\xFF\xD8\xFF\xE3") || 
-		strstr(buffer, "\xFF\xD8\xFF\xE1")) {
-		return IMAGE_TYPE;
-	}
-	
-	//png
-	if (strstr(buffer, "\x89PNG\r\n\x1A\n")) {
-		return IMAGE_TYPE;
-	}
-	
-	return UNSUPPORTED_TYPE;
+    if (strstr(buffer, "%PDF")) {
+        return PDF_TYPE;
+    }
+    
+    //jpg
+    if (strstr(buffer, "\xFF\xD8\xFF\xE0") || 
+        strstr(buffer, "\xFF\xD8\xFF\xE2") || 
+        strstr(buffer, "\xFF\xD8\xFF\xE3") || 
+        strstr(buffer, "\xFF\xD8\xFF\xE1")) {
+        return IMAGE_TYPE;
+    }
+    
+    //png
+    if (strstr(buffer, "\x89PNG\r\n\x1A\n")) {
+        return IMAGE_TYPE;
+    }
+    
+    return UNSUPPORTED_TYPE;
 }
 
 Php::Value PdfWriter::combine(Php::Parameters &params) {
     std::string destinationFile = params[1];
-	PDFWriter pdfWriter;
-	PDFParser* parser = NULL;
+    EStatusCode status;
+    PDFWriter pdfWriter;
+    PDFParser* parser = NULL;
 
-	unsigned long pagesCount;
-	double width;
-	double height;
+    unsigned long pagesCount;
+    double width;
+    double height;
 
-	const double PAGE_WIDTH = 612;
-	const double PAGE_HEIGHT = 792;
+    const double PAGE_WIDTH = 612;
+    const double PAGE_HEIGHT = 792;
 
-	//Php::out << "Creating " << destinationFile << std::endl;
-	pdfWriter.StartPDF(destinationFile, ePDFVersion17);
-	PDFDocumentCopyingContext* copyingContext = NULL;
+    //Php::out << "Creating " << destinationFile << std::endl;
+    status = pdfWriter.StartPDF(destinationFile, ePDFVersion17);
+    if (status != eSuccess) {
+        Php::warning << "Unable to open " << destinationFile << std::flush;
+    throw Php::Exception("Unable to open destination file");
+    }
+    PDFDocumentCopyingContext* copyingContext = NULL;
 
-	for (auto &iter : params[0]) {
-		if (file_exists(iter.second.stringValue()))
-		{
-			//Php::out << "\tWith: " << iter.second.stringValue() << std::endl;
+    for (auto &iter : params[0]) {
+        if (file_exists(iter.second.stringValue()))
+        {
+            //Php::out << "\tWith: " << iter.second.stringValue() << std::endl;
 
-			int mime = determineMimeType(iter.second.stringValue());
-			if(mime == UNSUPPORTED_TYPE) {
-				return false;
-			}
+            int mime = determineMimeType(iter.second.stringValue());
+            if (UNSUPPORTED_TYPE == mime) {
+                Php::warning << iter.second.stringValue() << " is an unsupported file type" << std::flush;
+                return false;
+            }
 
-			if (PDF_TYPE == mime) {
-				copyingContext = pdfWriter.CreatePDFCopyingContext(iter.second.stringValue());
-				if (copyingContext)
-				{
-					parser = copyingContext->GetSourceDocumentParser();
-					pagesCount = parser->GetPagesCount();
-					for (unsigned long i=0; i < pagesCount; ++i) 
-					{
-						// parse dimensions
-						PDFPageInput pageInput(parser,parser->ParsePage(i));
-						PDFRectangle mediaBox =  pageInput.GetMediaBox();
+            if (PDF_TYPE == mime) {
+                Php::warning << "PDF embedding: " << iter.second.stringValue() << std::flush;
+                copyingContext = pdfWriter.CreatePDFCopyingContext(iter.second.stringValue());
+                if (copyingContext)
+                {
+                    parser = copyingContext->GetSourceDocumentParser();
+                    pagesCount = parser->GetPagesCount();
+                    for (unsigned long i=0; i < pagesCount; ++i) 
+                    {
+                        // parse dimensions
+                        PDFPageInput pageInput(parser,parser->ParsePage(i));
+                        PDFRectangle mediaBox =  pageInput.GetMediaBox();
 
-						// create form
-						EStatusCodeAndObjectIDType result = copyingContext->CreateFormXObjectFromPDFPage(i,ePDFPageBoxMediaBox);
-						ObjectIDType reusableObjectID = result.second;
+                        // create form
+                        EStatusCodeAndObjectIDType result = copyingContext->CreateFormXObjectFromPDFPage(i,ePDFPageBoxMediaBox);
+                        ObjectIDType reusableObjectID = result.second;
 
-						// create target page
-						PDFPage* page = new PDFPage();
-						page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
+                        // create target page
+                        PDFPage* page = new PDFPage();
+                        page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
 
-						PageContentContext* pageContent = pdfWriter.StartPageContentContext(page);
+                        PageContentContext* pageContent = pdfWriter.StartPageContentContext(page);
 
-						height = mediaBox.UpperRightY - mediaBox.LowerLeftY;
-						width  = mediaBox.UpperRightX - mediaBox.LowerLeftX;
+                        height = mediaBox.UpperRightY - mediaBox.LowerLeftY;
+                        width  = mediaBox.UpperRightX - mediaBox.LowerLeftX;
 
-						if (width != 612 || height != 792)
-						{
-							double scaledWidth = (PAGE_WIDTH-40)/width;
+                        if (width != 612 || height != 792)
+                        {
+                            double scaledWidth = (PAGE_WIDTH-40)/width;
 
-							// Php::out << "U: " << mediaBox.UpperRightX << "x" << mediaBox.UpperRightY << std::endl;
-							// Php::out << "L: " << mediaBox.LowerLeftX << "x" << mediaBox.LowerLeftY << std::endl;
-							// Php::out << "DIV: " << PAGE_WIDTH << "/" << width << " " << scaledWidth << std::endl;
-							// place scaled page
-							pageContent->q();
-							pageContent->cm(scaledWidth, 0, 0, scaledWidth, 20, mediaBox.UpperRightX-height);
-							pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
-							pageContent->Q();
-						}
-						else
-						{
-							pageContent->q();
-							pageContent->cm(1, 0, 0, 1, 0, 0);
-							pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
-							pageContent->Q();
-						}
+                            // Php::out << "U: " << mediaBox.UpperRightX << "x" << mediaBox.UpperRightY << std::endl;
+                            // Php::out << "L: " << mediaBox.LowerLeftX << "x" << mediaBox.LowerLeftY << std::endl;
+                            // Php::out << "DIV: " << PAGE_WIDTH << "/" << width << " " << scaledWidth << std::endl;
+                            // place scaled page
+                            pageContent->q();
+                            pageContent->cm(scaledWidth, 0, 0, scaledWidth, 20, mediaBox.UpperRightX-height);
+                            pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
+                            pageContent->Q();
+                        }
+                        else
+                        {
+                            pageContent->q();
+                            pageContent->cm(1, 0, 0, 1, 0, 0);
+                            pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
+                            pageContent->Q();
+                        }
 
-						pdfWriter.EndPageContentContext(pageContent);
-						pdfWriter.WritePageAndRelease(page);
-					}
+                        pdfWriter.EndPageContentContext(pageContent);
+                        pdfWriter.WritePageAndRelease(page);
+                    }
 
-					delete parser;
-				}
-			} else {
-				AbstractContentContext::ImageOptions opt1;
-				opt1.boundingBoxHeight = PAGE_HEIGHT-40;
-				opt1.boundingBoxWidth = PAGE_WIDTH-40;
-				opt1.transformationMethod = AbstractContentContext::eFit;
-				opt1.fitProportional = true;
+                    delete parser;
+                }
+            } else {
+                AbstractContentContext::ImageOptions opt1;
+                opt1.boundingBoxHeight = PAGE_HEIGHT-40;
+                opt1.boundingBoxWidth = PAGE_WIDTH-40;
+                opt1.transformationMethod = AbstractContentContext::eFit;
+                opt1.fitProportional = true;
 
-				//Php::out << "Image embedding" << iter.second.stringValue() << std::endl;
+                Php::warning << "Image embedding: " << iter.second.stringValue() << std::flush;
 
-				PDFPage* page = new PDFPage();
-				page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
-				PageContentContext* cxt = pdfWriter.StartPageContentContext(page);
-				cxt->DrawImage(10, 10, iter.second.stringValue(), opt1);
-				pdfWriter.EndPageContentContext(cxt);
-				pdfWriter.WritePageAndRelease(page);
-			}
-		} else {
-			pdfWriter.EndPDF();
-			//Php::out << "\t " << iter.second.stringValue() << " doesn't exist!" << std::endl;
-			return false;
-		}
-	}
+                PDFPage* page = new PDFPage();
+                page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
+                PageContentContext* cxt = pdfWriter.StartPageContentContext(page);
+                cxt->DrawImage(10, 10, iter.second.stringValue(), opt1);
+                pdfWriter.EndPageContentContext(cxt);
+                pdfWriter.WritePageAndRelease(page);
+            }
+        } else {
+            pdfWriter.EndPDF();
+            Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::endl;
+            return false;
+        }
+    }
 
-	pdfWriter.EndPDF();
+    pdfWriter.EndPDF();
 
-	return true;
+    return true;
 }
+
