@@ -17,11 +17,15 @@
 #include <poppler-page.h>
 #include <openssl/sha.h>
 
+
+inline bool file_exists(const std::string &filename ) {
+    struct stat statBuffer;
+    return (stat(filename.c_str(), &statBuffer) == 0);
+}
+
 static int _mkdir(const char *dir) {
-    struct stat buffer;
     char tmp[256];
     char *p = NULL;
-    int status;
     size_t len;
 
     snprintf(tmp, sizeof(tmp),"%s",dir);
@@ -34,19 +38,17 @@ static int _mkdir(const char *dir) {
     for (p = tmp + 1; *p; p++) {
         if (*p == '/') {
             *p = 0;
-	    if (stat(tmp, &buffer) == -1) {
-                status = mkdir(tmp, S_IRWXU);
-                if (status != 0) {
-                    Php::error << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::endl;
-                    return -1;
-                }
-	    }
+
+            if (!file_exists(tmp) && mkdir(tmp, S_IRWXU) != 0) {
+				Php::warning << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::flush;
+				return -1;
+	        }
+
             *p = '/';
         }
     }
 
-    mkdir(tmp, S_IRWXU);
-    return 0;
+    return mkdir(tmp, S_IRWXU);
 }
 
 PdfDocument::PdfDocument() {
@@ -56,7 +58,12 @@ PdfDocument::PdfDocument() {
 }
 
 void PdfDocument::__construct(Php::Parameters &params) {
-    _document = poppler::document::load_from_file(params[0]); //,params[1],params[2]);
+	if (!file_exists(params[0])) {
+        Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
+        throw Php::Exception("File doesn't exist?");
+    }
+
+    _document = poppler::document::load_from_file(params[0]);
 }
 
 Php::Value PdfDocument::getCreator(){
@@ -155,7 +162,6 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     int lastPage = _document->pages();
     int resolution = 75;
     int x;
-    struct stat buffer;
     Php::Value returnValue;
 
     char pattern[300];
@@ -166,12 +172,12 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
 
     format = this->getImageFormat(params[0]);
     if (format == NULL) {
-        Php::error << "Unable to determine type" << std::endl;
+        Php::warning << "Unable to determine type" << std::flush;
         return false;
     }
 
     if (params[1].size() + 10 > 255) {
-        Php::error << "Path is larger than 255 chars - Unable to proceed" << std::endl;
+        Php::warning << "Path is larger than 255 chars - Unable to proceed" << std::flush;
         return false;
     }
 
@@ -186,11 +192,9 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     char * _dirname = dirname(pattern);
     // Php::out << "Attempting to create dir: " << _dirname << std::endl;
     // Check that the directory exists
-    if (stat (_dirname, &buffer) == -1) {
-        if (_mkdir(_dirname) != 0) {
-            Php::error << "PHP-PDF: Unable to create dir " << _dirname << " because '" << strerror(errno) << "'" << std::endl;
-            throw Php::Exception("Unable to create dir");
-        }
+    if (!file_exists(_dirname) && _mkdir(_dirname) != 0) {
+        Php::warning << "PHP-PDF: Unable to create dir " << _dirname << " because '" << strerror(errno) << "'" << std::flush;
+        throw Php::Exception("Unable to create directory");
     }
 
     for (x = firstPage; x < lastPage; x++) {
@@ -233,7 +237,7 @@ Php::Value PdfDocument::hash(Php::Parameters &params) {
 
     SHA_CTX context;
     if (!SHA1_Init(&context)) {
-        Php::error << "Unable to initialize openssl context" << std::endl;
+        Php::warning << "Unable to initialize openssl context" << std::flush;
         return -1;
     }
 
@@ -242,13 +246,13 @@ Php::Value PdfDocument::hash(Php::Parameters &params) {
         pageData = page->text(page->page_rect(poppler::media_box));
         arr =  pageData.to_utf8();
         if (!SHA1_Update(&context, (unsigned char*)&arr[0], arr.size())) {
-	    Php::error << "Unable to add data to hash context" << std::endl;
-	    return -1;
+	        Php::warning << "Unable to add data to hash context" << std::flush;
+	        return -1;
         }
     }
 
     if (!SHA1_Final(md,&context)) {
-        Php::error << "Unable to finalize hash" << std::endl;
+        Php::warning << "Unable to finalize hash" << std::flush;
         return -1;
     }
 
@@ -283,14 +287,14 @@ Php::Value PdfDocument::compare(Php::Parameters &params) {
     for (int pageNum = 0; pageNum < count; ++pageNum) {
         localPage = _document->create_page(pageNum);
         if (!localPage) {
-            Php::error << "PHP-PDF: Failed to read local page" << pageNum+1 << std::endl;
+            Php::warning << "PHP-PDF: Failed to read local page" << pageNum+1 << std::flush;
 
             return -1;
         }
 
         externalPage = document->_document->create_page(pageNum);
         if (!externalPage) {
-            Php::error << "PHP-PDF: Failed to read " << pageNum+1 << std::endl;
+            Php::warning << "PHP-PDF: Failed to read " << pageNum+1 << std::flush;
 
             return -1;
         }

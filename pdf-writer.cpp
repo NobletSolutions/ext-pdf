@@ -27,6 +27,11 @@
 #include "pdf-text.h"
 #include "pdf-image.h"
 
+inline bool file_exists(const std::string &filename ) {
+    struct stat statBuffer;
+    return (stat(filename.c_str(), &statBuffer) == 0);
+}
+
 std::map<std::string,std::string> allFonts;
 std::vector<std::string> split(const std::string& s, char delimiter) {
    std::vector<std::string> tokens;
@@ -114,9 +119,8 @@ Php::Value fonts() {
 PdfWriter::PdfWriter() = default;
 
 void PdfWriter::__construct(Php::Parameters &params) {
-    struct stat buffer;
-    if (stat (params[0], &buffer) != 0) {
-    Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
+    if (!file_exists(params[0])) {
+        Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
         throw Php::Exception("File doesn't exist?");
     }
 
@@ -134,13 +138,12 @@ void PdfWriter::__construct(Php::Parameters &params) {
 AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize) {
     AbstractContentContext::TextOptions * options;
     std::map<std::string,std::string>::iterator it;
-    struct stat buffer;
     PDFUsedFont * _font;
 
     it = allFonts.find(requestedFont);
     if (it != allFonts.end()) {
         // Check that the font file exists
-        if (stat (it->second.c_str(), &buffer) == -1) {
+        if (!file_exists(it->second.c_str())) {
             Php::warning << "Font " << requestedFont << " does not exist" << std::flush;
             throw Php::Exception("Font doesn't exist");
         }
@@ -156,7 +159,7 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         return options;
     }
 
-    Php::warning << "No such font: " << requestedFont << std::endl;
+    Php::warning << "No such font: " << requestedFont << std::flush;
     throw Php::Exception("No such font");
 }
 
@@ -298,7 +301,7 @@ void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentConte
 void PdfWriter::writePdf(Php::Parameters &params) {
     // Iterate and print keys and values of unordered_map
     for (const auto &n : pageText ) {
-//        Php::out << "PageText: [" << n.first << "] TextCount: [" << n.second.size() << "]\n";
+//      Php::out << "PageText: [" << n.first << "] TextCount: [" << n.second.size() << "]\n";
 
         PDFModifiedPage thePage(&writer, n.first, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
@@ -380,14 +383,14 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
         // Need a second instance of the writer for encrypted documents to work
         PDFWriter writer2;
-    EStatusCode status;
+        EStatusCode status;
         status = writer2.StartPDF(_outputFileName, ePDFVersion14);
-    if (status != eSuccess) {
+        if (status != eSuccess) {
             Php::warning << "Unable to open " << _outputFileName << std::flush;
-        throw Php::Exception("Unable to open file");
-    }
+            throw Php::Exception("Unable to open file");
+        }
 
-    writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
+        writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
         writer2.EndPDF();
         std::remove(tempfile.c_str());
     }
@@ -395,11 +398,6 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
 Php::Value PdfWriter::getAllFonts() {
     return getFonts();
-}
-
-inline bool file_exists(const std::string &filename ) {
-    struct stat statBuffer;
-    return (stat(filename.c_str(), &statBuffer) == 0);
 }
 
 const int UNSUPPORTED_TYPE = 0;
@@ -449,8 +447,9 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
     status = pdfWriter.StartPDF(destinationFile, ePDFVersion17);
     if (status != eSuccess) {
         Php::warning << "Unable to open " << destinationFile << std::flush;
-    throw Php::Exception("Unable to open destination file");
+        throw Php::Exception("Unable to open destination file");
     }
+
     PDFDocumentCopyingContext* copyingContext = NULL;
 
     for (auto &iter : params[0]) {
@@ -535,7 +534,7 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
             }
         } else {
             pdfWriter.EndPDF();
-            Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::endl;
+            Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::flush;
             return false;
         }
     }
