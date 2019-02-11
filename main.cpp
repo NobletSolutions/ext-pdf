@@ -134,6 +134,7 @@ extern "C" {
         });
 
 	pdfDocument.method<&PdfDocument::hash>("hashContent");
+        pdfDocument.method<&hashDocument>("hashDocument",{Php::ByVal("file", Php::Type::String)});
 
         myNamespace.add<fonts>("getFonts");
         myNamespace.add(PdfImageResult);

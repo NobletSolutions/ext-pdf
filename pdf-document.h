@@ -20,6 +20,8 @@
 #include "pdf-image-format.h"
 #include "pdf-image-result.h"
 
+Php::Value hashDocument(Php::Parameters &params);
+
 class PdfDocument: public Php::Base {
 protected:
     int _major = 0;

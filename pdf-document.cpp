@@ -58,7 +58,7 @@ PdfDocument::PdfDocument() {
 }
 
 void PdfDocument::__construct(Php::Parameters &params) {
-	if (!file_exists(params[0])) {
+    if (!file_exists(params[0])) {
         Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
         throw Php::Exception("File doesn't exist?");
     }
@@ -225,35 +225,35 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     return returnValue;
 }
 
-Php::Value PdfDocument::hash(Php::Parameters &params) {
-    char mdString[SHA_DIGEST_LENGTH*2+1];
+std::string hashContents(poppler::document *doc) {
+    char mdString[SHA_DIGEST_LENGTH * 2 + 1];
     unsigned char md[SHA_DIGEST_LENGTH];
 
     poppler::page *page;
     poppler::ustring pageData;
     poppler::byte_array arr;
 
-    int lastPage = _document->pages();
+    int lastPage = doc->pages();
 
     SHA_CTX context;
     if (!SHA1_Init(&context)) {
         Php::warning << "Unable to initialize openssl context" << std::flush;
-        return -1;
+	throw Php::Exception("Unable to initialize openssl context");
     }
 
     for (int x = 0; x < lastPage; x++) {
-        page = _document->create_page(x);
+        page     = doc->create_page(x);
         pageData = page->text(page->page_rect(poppler::media_box));
-        arr =  pageData.to_utf8();
+        arr      = pageData.to_utf8();
         if (!SHA1_Update(&context, (unsigned char*)&arr[0], arr.size())) {
-	        Php::warning << "Unable to add data to hash context" << std::flush;
-	        return -1;
+            Php::warning << "Unable to add data to hash context" << std::flush;
+            throw Php::Exception("Unable to initialize openssl context");
         }
     }
 
     if (!SHA1_Final(md,&context)) {
         Php::warning << "Unable to finalize hash" << std::flush;
-        return -1;
+        throw Php::Exception("Unable to initialize openssl context");
     }
 
     for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
@@ -261,6 +261,22 @@ Php::Value PdfDocument::hash(Php::Parameters &params) {
     }
 
     return mdString;
+}
+
+Php::Value hashDocument(Php::Parameters &params) {
+    if (!file_exists(params[0])) {
+        Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
+        throw Php::Exception("File doesn't exist?");
+    }
+
+    poppler::document *doc = poppler::document::load_from_file(params[0]);
+    std::string result = hashContents(doc);
+    delete doc;
+    return result;
+}
+
+Php::Value PdfDocument::hash(Php::Parameters &params) {
+    return hashContents(_document);
 }
 
 Php::Value PdfDocument::compare(Php::Parameters &params) {
