@@ -64,6 +64,10 @@ void PdfDocument::__construct(Php::Parameters &params) {
     }
 
     _document = poppler::document::load_from_file(params[0]);
+    if(_document == NULL) {
+	Php::warning << "Unable to open file as PDF" << std::flush;
+	throw Php::Exception("File is not a PDF");
+    }
 }
 
 Php::Value PdfDocument::getCreator(){
@@ -245,6 +249,7 @@ std::string hashContents(poppler::document *doc) {
         page     = doc->create_page(x);
         pageData = page->text(page->page_rect(poppler::media_box));
         arr      = pageData.to_utf8();
+
         if (!SHA1_Update(&context, (unsigned char*)&arr[0], arr.size())) {
             Php::warning << "Unable to add data to hash context" << std::flush;
             throw Php::Exception("Unable to initialize openssl context");
@@ -270,6 +275,11 @@ Php::Value hashDocument(Php::Parameters &params) {
     }
 
     poppler::document *doc = poppler::document::load_from_file(params[0]);
+    if (doc == NULL) {
+        Php::warning << "Unable to open " << params[0] << std::flush;
+        throw Php::Exception("Unable to open file");
+    }
+
     std::string result = hashContents(doc);
     delete doc;
     return result;
