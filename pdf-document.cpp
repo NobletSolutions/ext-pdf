@@ -40,9 +40,9 @@ static int _mkdir(const char *dir) {
             *p = 0;
 
             if (!file_exists(tmp) && mkdir(tmp, S_IRWXU) != 0) {
-				Php::warning << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::flush;
-				return -1;
-	        }
+                //Php::warning << "PHP-PDF: Unable to create dir " << tmp << " because '" << strerror(errno) << "'" << std::flush;
+                return -1;
+            }
 
             *p = '/';
         }
@@ -176,12 +176,12 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
 
     format = this->getImageFormat(params[0]);
     if (format == NULL) {
-        Php::warning << "Unable to determine type" << std::flush;
+        //Php::warning << "Unable to determine type" << std::flush;
         return false;
     }
 
     if (params[1].size() + 10 > 255) {
-        Php::warning << "Path is larger than 255 chars - Unable to proceed" << std::flush;
+        //Php::warning << "Path is larger than 255 chars - Unable to proceed" << std::flush;
         return false;
     }
 
@@ -313,14 +313,14 @@ Php::Value PdfDocument::compare(Php::Parameters &params) {
     for (int pageNum = 0; pageNum < count; ++pageNum) {
         localPage = _document->create_page(pageNum);
         if (!localPage) {
-            Php::warning << "PHP-PDF: Failed to read local page" << pageNum+1 << std::flush;
+            //Php::warning << "PHP-PDF: Failed to read local page" << pageNum+1 << std::flush;
 
             return -1;
         }
 
         externalPage = document->_document->create_page(pageNum);
         if (!externalPage) {
-            Php::warning << "PHP-PDF: Failed to read " << pageNum+1 << std::flush;
+            //Php::warning << "PHP-PDF: Failed to read " << pageNum+1 << std::flush;
 
             return -1;
         }
