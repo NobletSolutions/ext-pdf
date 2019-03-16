@@ -151,7 +151,6 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
         _font = writer.GetFontForFile(it->second.c_str(), 0);
         if (!_font) {
             Php::warning << "Unable to locate font " << requestedFont << std::flush;
-
             throw Php::Exception("Unable to locate font");
         }
 
@@ -175,7 +174,6 @@ void PdfWriter::setFont(Php::Parameters &params) {
 void PdfWriter::writeImageToPage(Php::Parameters &params) {
     if (params[0] < 0) {
         Php::warning << "Unable to write to a negative page number" << std::flush;
-
         throw Php::Exception("Cannot write to a negative page");
     }
 
@@ -198,7 +196,6 @@ void PdfWriter::writeImageToPage(Php::Parameters &params) {
 void PdfWriter::writeTextToPage(Php::Parameters &params) {
     if (params[0] < 0) {
         Php::warning << "Unable to write to a negative page number" << std::flush;
-
         throw Php::Exception("Cannot write to a negative page");
     }
 
@@ -459,12 +456,12 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
 
             int mime = determineMimeType(iter.second.stringValue());
             if (UNSUPPORTED_TYPE == mime) {
-                Php::warning << iter.second.stringValue() << " is an unsupported file type" << std::flush;
+                //Php::warning << iter.second.stringValue() << " is an unsupported file type" << std::flush;
                 return false;
             }
 
             if (PDF_TYPE == mime) {
-                Php::warning << "PDF embedding: " << iter.second.stringValue() << std::flush;
+                //Php::warning << "PDF embedding: " << iter.second.stringValue() << std::flush;
                 copyingContext = pdfWriter.CreatePDFCopyingContext(iter.second.stringValue());
                 if (copyingContext)
                 {
@@ -536,7 +533,7 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
                 opt1.transformationMethod = AbstractContentContext::eFit;
                 opt1.fitProportional = true;
 
-                Php::warning << "Image embedding: " << iter.second.stringValue() << std::flush;
+                //Php::warning << "Image embedding: " << iter.second.stringValue() << std::flush;
 
                 PDFPage* page = new PDFPage();
                 page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
@@ -547,7 +544,7 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
             }
         } else {
             pdfWriter.EndPDF();
-            Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::flush;
+            //Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::flush;
             return false;
         }
     }
