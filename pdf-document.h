@@ -26,6 +26,7 @@ class PdfDocument: public Php::Base {
 protected:
     int _major = 0;
     int _minor = 0;
+    std::string filePath;
     poppler::document *_document = NULL;
     PdfImageFormat * jpeg = NULL;
     PdfImageFormat * png = NULL;
