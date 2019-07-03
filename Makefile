@@ -19,7 +19,7 @@
 #
 
 NAME	= pdf
-VERSION	= 0.11.0
+VERSION	= 0.11.1
 
 #
 #	Php.ini directories
