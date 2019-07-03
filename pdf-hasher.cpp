@@ -106,9 +106,8 @@ long long getInfoStartPosition(std::string inputFilePath) {
     parser.StartPDFParsing(inFile.GetInputStream());
 
     trailer = parser.GetTrailer();
-    if (!trailer->Exists("Info")) {
-        std::cout << "File has no info\n";
-        return -1;
+    if (!trailer || !trailer->Exists("Info")) {
+        return 0;
     }
 
     PDFIndirectObjectReference *info = (PDFIndirectObjectReference*)trailer->QueryDirectObject("Info");
