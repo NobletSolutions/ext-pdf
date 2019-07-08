@@ -99,6 +99,7 @@ std::string hashPdfFileContents(std::string inputFilePath) {
 }
 
 long long getInfoStartPosition(std::string inputFilePath) {
+    long long infoBytePosition = 0;
     InputFile inFile;
     PDFParser parser;
     RefCountPtr<PDFDictionary> trailer;
@@ -107,14 +108,16 @@ long long getInfoStartPosition(std::string inputFilePath) {
 
     trailer = parser.GetTrailer();
     if (!trailer || !trailer->Exists("Info")) {
+        parser.ResetParser();
+        inFile.CloseFile();
         return 0;
     }
 
     PDFIndirectObjectReference *info = (PDFIndirectObjectReference*)trailer->QueryDirectObject("Info");
     XrefEntryInput* infoXrefEntry = parser.GetXrefEntry(info->mObjectID);
-
+    infoBytePosition = (long long)infoXrefEntry->mObjectPosition;
     parser.ResetParser();
     inFile.CloseFile();
 
-    return (long long)infoXrefEntry->mObjectPosition;
+    return infoBytePosition;
 }
