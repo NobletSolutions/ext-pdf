@@ -6,6 +6,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <PDFWriter/InputFile.h>
+#include <PDFWriter/EStatusCode.h>
 #include <PDFWriter/PDFParser.h>
 #include <PDFWriter/PDFDictionary.h>
 #include <PDFWriter/PDFIndirectObjectReference.h>
@@ -103,20 +104,23 @@ long long getInfoStartPosition(std::string inputFilePath) {
     InputFile inFile;
     PDFParser parser;
     RefCountPtr<PDFDictionary> trailer;
-    inFile.OpenFile(inputFilePath);
-    parser.StartPDFParsing(inFile.GetInputStream());
 
-    trailer = parser.GetTrailer();
-    if (!trailer || !trailer->Exists("Info")) {
-        parser.ResetParser();
-        inFile.CloseFile();
-        return 0;
+    inFile.OpenFile(inputFilePath);
+    PDFHummus::EStatusCode status = parser.StartPDFParsing(inFile.GetInputStream());
+
+    if (status == PDFHummus::eSuccess) {
+        trailer = parser.GetTrailer();
+        if (trailer != NULL && trailer->Exists("Info")) {
+            PDFIndirectObjectReference *info = (PDFIndirectObjectReference*)trailer->QueryDirectObject("Info");
+            if (info != NULL) {
+                XrefEntryInput *infoXrefEntry = parser.GetXrefEntry(info->mObjectID);
+                infoBytePosition = (long long)infoXrefEntry->mObjectPosition;
+                info->Release();
+                parser.ResetParser();
+            }
+        }
     }
 
-    PDFIndirectObjectReference *info = (PDFIndirectObjectReference*)trailer->QueryDirectObject("Info");
-    XrefEntryInput* infoXrefEntry = parser.GetXrefEntry(info->mObjectID);
-    infoBytePosition = (long long)infoXrefEntry->mObjectPosition;
-    parser.ResetParser();
     inFile.CloseFile();
 
     return infoBytePosition;
