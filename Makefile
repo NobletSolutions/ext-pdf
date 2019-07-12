@@ -84,9 +84,9 @@ LINKER				=	g++
 #	with a list of all flags that should be passed to the linker.
 #
 
-COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fpic `pkg-config poppler-cpp fontconfig openssl --cflags`
+COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fpic `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS)
 LINKER_FLAGS		=	-shared
-LINKER_DEPENDENCIES	=	-lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
+LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
 
 
 #
