@@ -4,5 +4,6 @@
 .settings
 .cproject
 .project
+.vscode
 *.pdf
 *.tar.bz2
