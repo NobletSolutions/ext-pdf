@@ -491,24 +491,29 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
                             double scaledWidth = (PAGE_WIDTH-40)/width;
                             double scaledHeight = (PAGE_HEIGHT-40)/height;
 
-                             // Php::out << "U: " << mediaBox.UpperRightX << "x" << mediaBox.UpperRightY << std::endl;
-                             // Php::out << "L: " << mediaBox.LowerLeftX << "x" << mediaBox.LowerLeftY << std::endl;
-                             // Php::out << "DIV: " << PAGE_WIDTH << "/" << width << " " << scaledWidth << std::endl;
-                             // Php::out << "DIV: " << PAGE_HEIGHT << "/" << height << " " << scaledHeight << std::endl;
+                            // Php::out << "U: " << mediaBox.UpperRightX << "x" << mediaBox.UpperRightY << std::endl;
+                            // Php::out << "L: " << mediaBox.LowerLeftX << "x" << mediaBox.LowerLeftY << std::endl;
+                            // Php::out << "DIV: " << PAGE_WIDTH << "/" << width << " " << scaledWidth << std::endl;
+                            // Php::out << "DIV: " << PAGE_HEIGHT << "/" << height << " " << scaledHeight << std::endl;
 
                             /* we scale the height to place the document in the middle of the page */
                             double heightPlacementAdjustment = 20;
-                            if(height < PAGE_HEIGHT) {
-                                heightPlacementAdjustment += ((PAGE_HEIGHT-height)*scaledHeight)/2;
-                            } else if (height > PAGE_HEIGHT){
-                                heightPlacementAdjustment -= ((PAGE_HEIGHT-height)*scaledHeight)/2;
+                            double tmpAdjustment = ((PAGE_HEIGHT-height)*scaledHeight)/2;
+                            if (height < PAGE_HEIGHT) {
+                                //Php::out << "height < PAGE_HEIGHT " << height << " < " << PAGE_HEIGHT << std::endl;
+                                heightPlacementAdjustment += tmpAdjustment;
                             }
+                            // else if (height > PAGE_HEIGHT) {
+                            //     //Php::out << "height > PAGE_HEIGHT " << height << " > " << PAGE_HEIGHT << std::endl;
+                            //     heightPlacementAdjustment -= tmpAdjustment;
+                            // }
 
+                            // Php::out << "Adjustment Amount: " << tmpAdjustment << std::endl;
                             // Php::out << "heightPlacementAdjustment: " << heightPlacementAdjustment << std::endl;
 
                             // place scaled page
                             pageContent->q();
-                            pageContent->cm(scaledWidth, 0, 0, scaledWidth, 20, heightPlacementAdjustment);
+                            pageContent->cm(scaledWidth < scaledHeight ? scaledWidth:scaledHeight, 0, 0, scaledWidth < scaledHeight ? scaledWidth:scaledHeight, 20, heightPlacementAdjustment);
                             pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
                             pageContent->Q();
                         }
