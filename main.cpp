@@ -8,7 +8,7 @@
 #include "pdf-image.h"
 
 #ifndef VERSION
-#define VERSION "0.10"
+#define VERSION "0.11.5"
 #endif
 
 /**
@@ -31,8 +31,8 @@ extern "C" {
         Php::Namespace myNamespace("PDF");
 
         // PdfImage Methods ========================
-        Php::Class<PdfImage> pdfImage("PdfImage");
-        pdfImage.method<&PdfImage::__construct>("__construct", {
+        Php::Class<PdfImage> pdfImage("PdfImage", 0);
+        pdfImage.method<&PdfImage::__construct>("__construct", Php::Public, {
             Php::ByVal("x", Php::Type::Numeric),
             Php::ByVal("y", Php::Type::Numeric),
             Php::ByVal("imagepath", Php::Type::String),
@@ -40,16 +40,16 @@ extern "C" {
             Php::ByVal("width", Php::Type::Numeric, false),
             Php::ByVal("height", Php::Type::Numeric, false)
         });
-        pdfImage.method<&PdfImage::getX>("getX");
-        pdfImage.method<&PdfImage::getY>("getY");
-        pdfImage.method<&PdfImage::getIndex>("getIndex");
-        pdfImage.method<&PdfImage::getImagePath>("getImagePath");
-        pdfImage.method<&PdfImage::getWidth>("getWidth");
-        pdfImage.method<&PdfImage::getHeight>("getHeight");
+        pdfImage.method<&PdfImage::getX>("getX", Php::Public);
+        pdfImage.method<&PdfImage::getY>("getY", Php::Public);
+        pdfImage.method<&PdfImage::getIndex>("getIndex", Php::Public);
+        pdfImage.method<&PdfImage::getImagePath>("getImagePath", Php::Public);
+        pdfImage.method<&PdfImage::getWidth>("getWidth", Php::Public);
+        pdfImage.method<&PdfImage::getHeight>("getHeight", Php::Public);
 
         // PdfText Methods =========================
         Php::Class<PdfText> pdfText("PdfText");
-        pdfText.method<&PdfText::__construct>("__construct", {
+        pdfText.method<&PdfText::__construct>("__construct", Php::Public, {
             Php::ByVal("x", Php::Type::Numeric),
             Php::ByVal("y", Php::Type::Numeric),
             Php::ByVal("text", Php::Type::String),
@@ -57,84 +57,84 @@ extern "C" {
             Php::ByVal("font", Php::Type::String, false)
         });
 
-        pdfText.method<&PdfText::getX>("getX");
-        pdfText.method<&PdfText::getY>("getY");
-        pdfText.method<&PdfText::getText>("getText");
-        pdfText.method<&PdfText::getText>("__toString");
+        pdfText.method<&PdfText::getX>("getX", Php::Public);
+        pdfText.method<&PdfText::getY>("getY", Php::Public);
+        pdfText.method<&PdfText::getText>("getText", Php::Public);
+        pdfText.method<&PdfText::getText>("__toString", Php::Public);
 
         // PdfWriter Methods =========================
         Php::Class<PdfWriter> pdfWriter("PdfWriter");
-        pdfWriter.method<&PdfWriter::__construct>("__construct", {
+        pdfWriter.method<&PdfWriter::__construct>("__construct", Php::Public, {
             Php::ByVal("inputFile", Php::Type::String),
             Php::ByVal("outputFile", Php::Type::String)
         });
 
-        pdfWriter.method<&PdfWriter::getAllFonts>("getAllFonts");
-        pdfWriter.method<&PdfWriter::setFont>("setFont", {
+        pdfWriter.method<&PdfWriter::getAllFonts>("getAllFonts", Php::Public);
+        pdfWriter.method<&PdfWriter::setFont>("setFont", Php::Public, {
 			Php::ByVal("font",Php::Type::String)
         });
 
-        pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage",{
+        pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage", Php::Public, {
             Php::ByVal("page",Php::Type::Numeric),
             Php::ByVal("modifications", Php::Type::Array)
         });
 
-        pdfWriter.method<&PdfWriter::writeImageToPage>("writeImageToPage",{
+        pdfWriter.method<&PdfWriter::writeImageToPage>("writeImageToPage", Php::Public, {
             Php::ByVal("page",Php::Type::Numeric),
             Php::ByVal("image","PDF\\PdfImage")
         });
 
-        pdfWriter.method<&PdfWriter::writePdf>("save",{
+        pdfWriter.method<&PdfWriter::writePdf>("save", Php::Public, {
             Php::ByVal("ranges", Php::Type::Array, false)
         });
 
-        pdfWriter.method<&PdfWriter::combine>("combine",{
+        pdfWriter.method<&PdfWriter::combine>("combine", Php::Public, {
             Php::ByVal("documents", Php::Type::Array),
             Php::ByVal("destination", Php::Type::String),
         });
  
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");
-        PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Private);
-        PdfImageResult.method<&PdfImageResult::getImageWidth>("getImageWidth");
-        PdfImageResult.method<&PdfImageResult::getImageHeight>("getImageHeight");
-        PdfImageResult.method<&PdfImageResult::getPageWidth>("getPageWidth");
-        PdfImageResult.method<&PdfImageResult::getPageHeight>("getPageHeight");
-        PdfImageResult.method<&PdfImageResult::getPage>("getPage");
+        PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getImageWidth>("getImageWidth", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getImageHeight>("getImageHeight", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getPageWidth>("getPageWidth", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getPageHeight>("getPageHeight", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getPage>("getPage", Php::Public);
 
         Php::Class<PdfDocument> pdfDocument("PdfDocument");
-        pdfDocument.add(Php::Constant("IMAGE_JPEG",1));
-        pdfDocument.add(Php::Constant("IMAGE_PNG",2));
-        pdfDocument.add(Php::Constant("IMAGE_TIFF",3));
+        pdfDocument.constant("IMAGE_JPEG", 1);
+        pdfDocument.constant("IMAGE_PNG", 2);
+        pdfDocument.constant("IMAGE_TIFF", 3);
 
-        pdfDocument.method<&PdfDocument::__construct>("__construct", {
+        pdfDocument.method<&PdfDocument::__construct>("__construct", Php::Public, {
             Php::ByVal("file", Php::Type::String),
             Php::ByVal("user", Php::Type::String, false),
             Php::ByVal("password", Php::Type::String, false)
         });
 
-        pdfDocument.method<&PdfDocument::getMajorVersion>("getMajorVersion");
-        pdfDocument.method<&PdfDocument::getMinorVersion>("getMinorVersion");
-        pdfDocument.method<&PdfDocument::getCreationDate>("getCreationDate");
-        pdfDocument.method<&PdfDocument::getModifiedDate>("getModifiedDate");
-        pdfDocument.method<&PdfDocument::getCreator>("getCreator");
-        pdfDocument.method<&PdfDocument::hasEmbeddedFiles>("hasEmbeddedFiles");
-        pdfDocument.method<&PdfDocument::isLocked>("isLocked");
-        pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted");
-        pdfDocument.method<&PdfDocument::isLinear>("isLinear");
-        pdfDocument.method<&PdfDocument::numberOfPages>("getNumberOfPages");
-        pdfDocument.method<&PdfDocument::asString>("asString");
-        pdfDocument.method<&PdfDocument::toImage>("toImage", {
+        pdfDocument.method<&PdfDocument::getMajorVersion>("getMajorVersion", Php::Public);
+        pdfDocument.method<&PdfDocument::getMinorVersion>("getMinorVersion", Php::Public);
+        pdfDocument.method<&PdfDocument::getCreationDate>("getCreationDate", Php::Public);
+        pdfDocument.method<&PdfDocument::getModifiedDate>("getModifiedDate", Php::Public);
+        pdfDocument.method<&PdfDocument::getCreator>("getCreator", Php::Public);
+        pdfDocument.method<&PdfDocument::hasEmbeddedFiles>("hasEmbeddedFiles", Php::Public);
+        pdfDocument.method<&PdfDocument::isLocked>("isLocked", Php::Public);
+        pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted", Php::Public);
+        pdfDocument.method<&PdfDocument::isLinear>("isLinear", Php::Public);
+        pdfDocument.method<&PdfDocument::numberOfPages>("getNumberOfPages", Php::Public);
+        pdfDocument.method<&PdfDocument::asString>("asString", Php::Public);
+        pdfDocument.method<&PdfDocument::toImage>("toImage", Php::Public, {
             Php::ByVal("format", Php::Type::Constant),
             Php::ByVal("output", Php::Type::String),
             Php::ByVal("dpi", Php::Type::Numeric,false)
         });
 
-        pdfDocument.method<&PdfDocument::compare>("compare", {
+        pdfDocument.method<&PdfDocument::compare>("compare", Php::Public, {
             Php::ByRef("document", "PDF\\PdfDocument", false)
         });
 
-	pdfDocument.method<&PdfDocument::hash>("hashContent");
-        pdfDocument.method<&hashDocument>("hashDocument",{Php::ByVal("file", Php::Type::String)});
+        pdfDocument.method<&PdfDocument::hash>("hashContent", Php::Public);
+        pdfDocument.method<&hashDocument>("hashDocument", Php::Public, {Php::ByVal("file", Php::Type::String)});
 
         myNamespace.add<fonts>("getFonts");
         myNamespace.add(PdfImageResult);
