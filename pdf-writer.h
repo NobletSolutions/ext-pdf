@@ -38,7 +38,7 @@ private:
     std::string _outputFileName;
     std::unordered_map<double,std::vector<PdfImage*>> pageImages;
     std::unordered_map<double,std::vector<PdfText*>> pageText;
-    void writeText(PdfText *obj, AbstractContentContext *contentContext);
+    void writeText(PdfText *obj, int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext);
     void writeImage(PdfImage *image, AbstractContentContext *contentContext);
 public:
     PdfWriter();

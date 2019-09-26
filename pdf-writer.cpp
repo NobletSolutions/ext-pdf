@@ -16,6 +16,7 @@
 #include <PDFWriter/PDFPageInput.h>
 #include <phpcpp.h>
 #include <sys/stat.h>
+#include <math.h>
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -235,7 +236,99 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
     return;
 }
 
-void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext) {
+const long double RADIAN_PER_DEGREE = 0.0174533;
+
+std::vector<std::vector<double>> multiplyMatrices(std::vector<std::vector<double>> firstMatrix, std::vector<std::vector<double>> secondMatrix)
+{
+    std::vector<std::vector<double>> result(2, std::vector<double>(2, 0));
+
+    result[0][0] = (firstMatrix[0][0]*secondMatrix[0][0])+(firstMatrix[0][1]*secondMatrix[1][0]);
+    result[0][1] = (firstMatrix[0][0]*secondMatrix[0][1])+(firstMatrix[0][1]*secondMatrix[1][1]);
+
+    result[1][0] = (firstMatrix[1][0]*secondMatrix[0][0])+(firstMatrix[1][1]*secondMatrix[1][0]);
+    result[1][1] = (firstMatrix[1][0]*secondMatrix[1][0])+(firstMatrix[1][1]*secondMatrix[1][1]);
+
+    return result;
+}
+
+void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, AbstractContentContext::TextOptions *options, double long scale, double long x, double long y)
+{
+    switch (pageRotation) {
+        case 0:
+            contentContext->Tm(1, 0, 0, 1, x, y);
+
+            break;
+        case 90:
+            // Use UpperRightX because the page was rotated so Y is the width
+            if (mediaBox.UpperRightX > mediaBox.UpperRightY) {
+                std::vector<std::vector<double>> scaling(2, std::vector<double>(2, 0));
+                std::vector<std::vector<double>> rotation(2, std::vector<double>(2, 0));
+
+                scaling[0][0] = scale;
+                scaling[1][1] = scale;
+
+                rotation[0][0] = cosl(RADIAN_PER_DEGREE*pageRotation);
+                rotation[0][1] = sinl(RADIAN_PER_DEGREE*pageRotation);
+                rotation[1][0] = -1*rotation[0][1];
+                rotation[1][1] = rotation[0][0];
+
+                std::vector<std::vector<double>> result = multiplyMatrices(scaling, rotation);
+
+                contentContext->Tm(result[0][0], result[0][1], result[1][0], result[1][1], mediaBox.UpperRightX-y, x);
+            } else {
+                contentContext->Tm(1, 0, 0, 1, x, y);
+            }
+
+            break;
+        case 180:
+            contentContext->Tm(-1, 0, 0, -1, mediaBox.UpperRightX-x,mediaBox.UpperRightY-y);
+            break;
+        case 270:
+            // Rotated 270 degrees into portrait mode
+            if (mediaBox.UpperRightX > mediaBox.UpperRightY) {
+                std::vector<std::vector<double>> scaling(2, std::vector<double>(2, 0));
+                std::vector<std::vector<double>> rotation(2, std::vector<double>(2, 0));
+
+                scaling[0][0] = scale;//(options->font) ? 1 : options->fontSize;
+                scaling[1][1] = scale;//(options->font) ? 1 : options->fontSize;
+
+                rotation[0][0] = cosl(RADIAN_PER_DEGREE*pageRotation);
+                rotation[0][1] = sinl(RADIAN_PER_DEGREE*pageRotation);
+                rotation[1][0] = -1*rotation[0][1];
+                rotation[1][1] = rotation[0][0];
+
+                std::vector<std::vector<double>> result = multiplyMatrices(scaling, rotation);
+
+                contentContext->Tm(result[0][0], result[0][1], result[1][0], result[1][1], y, mediaBox.UpperRightY-x);
+            } else {
+                contentContext->Tm(1, 0, 0, 1, x, y);
+            }
+
+            break;
+    }
+}
+
+void writeTextToPdf(double long x, double long y, std::string text, int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, AbstractContentContext::TextOptions *options)
+{
+    double r = (unsigned char)((options->colorValue >> 16) & 0xFF);
+    double g = (unsigned char)((options->colorValue >> 8) & 0xFF);
+    double b = (unsigned char)(options->colorValue & 0xFF);
+
+    contentContext->BT();
+    contentContext->rg(r/255, g/255, b/255);
+
+    if (options->font) {
+        contentContext->Tf(options->font, options->fontSize);
+        positionText(pageRotation, mediaBox, contentContext, options, 1, x, y);
+    } else {
+        positionText(pageRotation, mediaBox, contentContext, options, options->fontSize, x, y);
+    }
+
+    contentContext->Tj(text);
+    contentContext->ET();
+}
+
+void PdfWriter::writeText(PdfText *obj, int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext) {
 //    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
     AbstractContentContext::TextOptions * options;
 
@@ -259,17 +352,17 @@ void PdfWriter::writeText(PdfText *obj, AbstractContentContext *contentContext) 
     if (obj->getText().stringValue().find("\n") != std::string::npos) {
         std::vector<std::string> tokens = split(obj->getText().stringValue(),'\n');
         double lineHeight = 0;
-        PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H",14);
+        PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H", options->fontSize+1);
 
         for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
-            contentContext->WriteText((double) obj->getX(), (double) obj->getY()-lineHeight, *it, *options);
+            writeTextToPdf((double)obj->getX(), (double)obj->getY(), *it, pageRotation, mediaBox, contentContext, options);
             lineHeight += textDimensions.height;
         }
 
         return;
     }
 
-    contentContext->WriteText((double) obj->getX(), (double) obj->getY(), obj->getText(), *options);
+    writeTextToPdf((double)obj->getX(), (double)obj->getY(), obj->getText(), pageRotation, mediaBox, contentContext, options);
 }
 
 void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext) {
@@ -304,9 +397,14 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
         if (contentContext) {
+            PDFObject* page = writer.GetModifiedFileParser().ParsePage(n.first);
+            PDFPageInput pageInput(&writer.GetModifiedFileParser(), page);
+            PDFRectangle mediaBox = pageInput.GetMediaBox();
+            int pageRotation      = pageInput.GetRotate();
+
             // iterate over each PdfText point
             for (const auto &iter : n.second) {
-                this->writeText(iter, contentContext);
+                this->writeText(iter, pageRotation, mediaBox, contentContext);
                 //Php::out << "Delete iter" << std::endl;
                 delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
             }
@@ -319,7 +417,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
                 for (const auto& i : images->second) {
                     //Php::out << "\tImage: [" << i->getImagePath() << "]\n";
-                    this->writeImage(i,contentContext);
+                    this->writeImage(i, contentContext);
                     delete i;
                 }
 
@@ -333,7 +431,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
     }
 
 //    Php::out << "Image Pages Left: " << pageImages.size() << std::endl;
-    for( const auto& i : pageImages ) {
+    for (const auto& i : pageImages ) {
         PDFModifiedPage thePage(&writer, i.first, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
         if (contentContext) {
