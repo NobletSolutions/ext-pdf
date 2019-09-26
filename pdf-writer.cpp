@@ -137,7 +137,6 @@ void PdfWriter::__construct(Php::Parameters &params) {
 }
 
 AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize) {
-    AbstractContentContext::TextOptions * options;
     std::map<std::string,std::string>::iterator it;
     PDFUsedFont * _font;
 
@@ -155,8 +154,7 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
             throw Php::Exception("Unable to locate font");
         }
 
-        options = new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, 0);
-        return options;
+        return new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, 0);
     }
 
     Php::warning << "No such font: " << requestedFont << std::flush;
@@ -194,7 +192,8 @@ void PdfWriter::writeImageToPage(Php::Parameters &params) {
     }
 }
 
-void PdfWriter::writeTextToPage(Php::Parameters &params) {
+void PdfWriter::writeTextToPage(Php::Parameters &params)
+{
     if (params[0] < 0) {
         Php::warning << "Unable to write to a negative page number" << std::flush;
         throw Php::Exception("Cannot write to a negative page");
@@ -205,25 +204,22 @@ void PdfWriter::writeTextToPage(Php::Parameters &params) {
         throw Php::Exception("No font set!");
     }
 
-    if (params[1].size() > 0) {
+    if (params[1].size() > 0)
+    {
         double pageIndex = params[0];
 
         auto search = pageText.find(pageIndex);
-        if (search != pageText.end()) {
-//            Php::out <<"["<< pageIndex << "] Added (pushed) " << params[1].size() << " text(s)" << std::endl;
-
+        if (search != pageText.end()) 
+        {
             for (auto &iter : params[1]) {
                 PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
-//                Php::out << "\t" << obj->getText() << std::endl;
                 search->second.push_back(obj);
             }
         } else {
             std::vector<PdfText*> v;
-//            Php::out <<"["<< pageIndex << "] Added (new) " << params[1].size() << " text(s)" << std::endl;
 
             for (auto &iter : params[1]) {
                 PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
-//                Php::out << "\t" << obj->getText() << std::endl;
                 v.push_back(obj);
             }
 
@@ -251,11 +247,19 @@ std::vector<std::vector<double>> multiplyMatrices(std::vector<std::vector<double
     return result;
 }
 
-void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, AbstractContentContext::TextOptions *options, double long scale, double long x, double long y)
+void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, double long scale, double long x, double long y)
 {
+    double a = 1;
+    double c = 1;
+    double b = 0;
+    double d = 0;
+    double e = 0;
+    double f = 0;
+
     switch (pageRotation) {
         case 0:
-            contentContext->Tm(1, 0, 0, 1, x, y);
+            e = x;
+            f = y;
 
             break;
         case 90:
@@ -264,8 +268,8 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
                 std::vector<std::vector<double>> scaling(2, std::vector<double>(2, 0));
                 std::vector<std::vector<double>> rotation(2, std::vector<double>(2, 0));
 
-                scaling[0][0] = scale;
-                scaling[1][1] = scale;
+                scaling[0][0]  = scale;
+                scaling[1][1]  = scale;
 
                 rotation[0][0] = cosl(RADIAN_PER_DEGREE*pageRotation);
                 rotation[0][1] = sinl(RADIAN_PER_DEGREE*pageRotation);
@@ -273,15 +277,24 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
                 rotation[1][1] = rotation[0][0];
 
                 std::vector<std::vector<double>> result = multiplyMatrices(scaling, rotation);
-
-                contentContext->Tm(result[0][0], result[0][1], result[1][0], result[1][1], mediaBox.UpperRightX-y, x);
+                a = result[0][0];
+                b = result[0][1];
+                c = result[1][0];
+                d = result[1][1];
+                e = mediaBox.UpperRightX-y;
+                f = x;
             } else {
-                contentContext->Tm(1, 0, 0, 1, x, y);
+                e = x;
+                f = y;
             }
 
             break;
         case 180:
-            contentContext->Tm(-1, 0, 0, -1, mediaBox.UpperRightX-x,mediaBox.UpperRightY-y);
+            a = -1;
+            d = -1;
+            e = mediaBox.UpperRightX-x;
+            f = mediaBox.UpperRightY-y;
+
             break;
         case 270:
             // Rotated 270 degrees into portrait mode
@@ -289,8 +302,8 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
                 std::vector<std::vector<double>> scaling(2, std::vector<double>(2, 0));
                 std::vector<std::vector<double>> rotation(2, std::vector<double>(2, 0));
 
-                scaling[0][0] = scale;//(options->font) ? 1 : options->fontSize;
-                scaling[1][1] = scale;//(options->font) ? 1 : options->fontSize;
+                scaling[0][0]  = scale;
+                scaling[1][1]  = scale;
 
                 rotation[0][0] = cosl(RADIAN_PER_DEGREE*pageRotation);
                 rotation[0][1] = sinl(RADIAN_PER_DEGREE*pageRotation);
@@ -298,68 +311,73 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
                 rotation[1][1] = rotation[0][0];
 
                 std::vector<std::vector<double>> result = multiplyMatrices(scaling, rotation);
-
-                contentContext->Tm(result[0][0], result[0][1], result[1][0], result[1][1], y, mediaBox.UpperRightY-x);
+                a = result[0][0];
+                b = result[0][1];
+                c = result[1][0];
+                d = result[1][1];
+                e = y;
+                f = mediaBox.UpperRightY-x;
             } else {
-                contentContext->Tm(1, 0, 0, 1, x, y);
+                e = x;
+                f = y;
             }
 
             break;
     }
+
+    contentContext->Tm(a, b, c, d, e, f);
 }
 
-void writeTextToPdf(double long x, double long y, std::string text, int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, AbstractContentContext::TextOptions *options)
+void writeTextToPdf(double long x, double long y, std::string text, int pageRotation, const PDFRectangle &mediaBox, AbstractContentContext *contentContext, AbstractContentContext::TextOptions *options)
 {
     double r = (unsigned char)((options->colorValue >> 16) & 0xFF);
     double g = (unsigned char)((options->colorValue >> 8) & 0xFF);
     double b = (unsigned char)(options->colorValue & 0xFF);
+    double fontSize = options->fontSize;
 
     contentContext->BT();
     contentContext->rg(r/255, g/255, b/255);
 
     if (options->font) {
         contentContext->Tf(options->font, options->fontSize);
-        positionText(pageRotation, mediaBox, contentContext, options, 1, x, y);
+        positionText(pageRotation, mediaBox, contentContext, 1, x, y);
     } else {
-        positionText(pageRotation, mediaBox, contentContext, options, options->fontSize, x, y);
+        positionText(pageRotation, mediaBox, contentContext, fontSize, x, y);
+    }
+
+    if (text.find("\n") != std::string::npos) {
+        std::vector<std::string> tokens = split(text,'\n');
+        for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
+            contentContext->Tj(*it);
+            contentContext->Td(0,-1.1*fontSize);
+        }
+
+        contentContext->ET();
+        return;
     }
 
     contentContext->Tj(text);
     contentContext->ET();
 }
 
-void PdfWriter::writeText(PdfText *obj, int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext) {
+void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &mediaBox, AbstractContentContext *contentContext) {
 //    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
-    AbstractContentContext::TextOptions * options;
+    AbstractContentContext::TextOptions * options = NULL;
 
     if (obj->getFontSize() || obj->getFont() ) {
         int _fontSize = 10;
         std::string fontName(obj->getFont().stringValue());
-        if(obj->getFontSize()) {
-            _fontSize = (int)obj->getFontSize();
-        }
-
-        if (fontName.empty()){
+        if (fontName.empty()) {
             fontName.assign(defaultFontName);
         }
 
-//        Php::out << "Setting font " << fontName << std::endl;
+        if (obj->getFontSize()) {
+            _fontSize = (int)obj->getFontSize();
+        }
+
         options = this->getFont(fontName, _fontSize);
     } else {
         options = defaultText;
-    }
-
-    if (obj->getText().stringValue().find("\n") != std::string::npos) {
-        std::vector<std::string> tokens = split(obj->getText().stringValue(),'\n');
-        double lineHeight = 0;
-        PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H", options->fontSize+1);
-
-        for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
-            writeTextToPdf((double)obj->getX(), (double)obj->getY()-lineHeight, *it, pageRotation, mediaBox, contentContext, options);
-            lineHeight += textDimensions.height;
-        }
-
-        return;
     }
 
     writeTextToPdf((double)obj->getX(), (double)obj->getY(), obj->getText(), pageRotation, mediaBox, contentContext, options);
