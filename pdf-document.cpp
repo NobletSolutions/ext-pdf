@@ -216,8 +216,15 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         page = _document->create_page(x);
 
         poppler::rectf pageDim = page->page_rect();
-        pageWidth = pageDim.width();
-        pageHeight = pageDim.height();
+        poppler::page::orientation_enum orientation = page->orientation();
+
+        if (orientation == poppler::page::orientation_enum::landscape || orientation == poppler::page::orientation_enum::seascape) {
+            pageWidth = pageDim.height();
+            pageHeight = pageDim.width();
+        } else {
+            pageWidth = pageDim.width();
+            pageHeight = pageDim.height();
+        }
 
         image = renderer->render_page(page, resolution, resolution, 0, 0, -1, -1, poppler::rotation_enum::rotate_0);
         image.save(outFile, format->getFormat(), resolution);

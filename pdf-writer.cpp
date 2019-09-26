@@ -355,7 +355,7 @@ void PdfWriter::writeText(PdfText *obj, int pageRotation, PDFRectangle mediaBox,
         PDFUsedFont::TextMeasures textDimensions = options->font->CalculateTextDimensions("H", options->fontSize+1);
 
         for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
-            writeTextToPdf((double)obj->getX(), (double)obj->getY(), *it, pageRotation, mediaBox, contentContext, options);
+            writeTextToPdf((double)obj->getX(), (double)obj->getY()-lineHeight, *it, pageRotation, mediaBox, contentContext, options);
             lineHeight += textDimensions.height;
         }
 
