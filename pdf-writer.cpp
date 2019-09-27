@@ -250,9 +250,9 @@ std::vector<std::vector<double>> multiplyMatrices(std::vector<std::vector<double
 void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContext *contentContext, double long scale, double long x, double long y)
 {
     double a = 1;
-    double c = 1;
     double b = 0;
-    double d = 0;
+    double c = 0;
+    double d = 1;
     double e = 0;
     double f = 0;
 
@@ -325,6 +325,8 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
             break;
     }
 
+    Php::out << a << " " << b << " " << c << " " << d << " " << e << " " << f << " Tm" << std::endl;
+
     contentContext->Tm(a, b, c, d, e, f);
 }
 
@@ -339,6 +341,7 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
     contentContext->rg(r/255, g/255, b/255);
 
     if (options->font) {
+	    Php::out << "Have Font" << std::endl;
         contentContext->Tf(options->font, options->fontSize);
         positionText(pageRotation, mediaBox, contentContext, 1, x, y);
     } else {
@@ -346,6 +349,7 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
     }
 
     if (text.find("\n") != std::string::npos) {
+	    Php::out << "Text has new lines: " << text << std::endl;
         std::vector<std::string> tokens = split(text,'\n');
         for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
             contentContext->Tj(*it);
@@ -356,6 +360,7 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
         return;
     }
 
+    Php::out << "No new line: " << text << std::endl;
     contentContext->Tj(text);
     contentContext->ET();
 }
