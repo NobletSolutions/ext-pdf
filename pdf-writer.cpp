@@ -325,7 +325,7 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
             break;
     }
 
-    Php::out << a << " " << b << " " << c << " " << d << " " << e << " " << f << " Tm" << std::endl;
+    //Php::out << a << " " << b << " " << c << " " << d << " " << e << " " << f << " Tm" << std::endl;
 
     contentContext->Tm(a, b, c, d, e, f);
 }
@@ -341,7 +341,6 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
     contentContext->rg(r/255, g/255, b/255);
 
     if (options->font) {
-	    Php::out << "Have Font" << std::endl;
         contentContext->Tf(options->font, options->fontSize);
         positionText(pageRotation, mediaBox, contentContext, 1, x, y);
     } else {
@@ -349,7 +348,6 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
     }
 
     if (text.find("\n") != std::string::npos) {
-	    Php::out << "Text has new lines: " << text << std::endl;
         std::vector<std::string> tokens = split(text,'\n');
         for (std::vector<std::string>::iterator it = tokens.begin() ; it != tokens.end(); ++it) {
             contentContext->Tj(*it);
@@ -360,7 +358,7 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
         return;
     }
 
-    Php::out << "No new line: " << text << std::endl;
+    //Php::out << "No new line: " << text << std::endl;
     contentContext->Tj(text);
     contentContext->ET();
 }
