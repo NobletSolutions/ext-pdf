@@ -43,6 +43,8 @@ public:
     Php::Value isEncrypted();
     Php::Value isLinear();
     Php::Value isLocked();
+    Php::Value hasJS();
+    Php::Value hasXFA();
     Php::Value numberOfPages();
     Php::Value asString();
     Php::Value toImage(Php::Parameters &params);

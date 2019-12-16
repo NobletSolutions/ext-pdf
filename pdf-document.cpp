@@ -135,6 +135,14 @@ Php::Value PdfDocument::isLocked() {
     return _document->is_locked();
 }
 
+Php::Value PdfDocument::hasJS() {
+    return _document->has_js();
+}
+
+Php::Value PdfDocument::hasXFA() {
+    return _document->has_xfa();
+}
+
 Php::Value PdfDocument::numberOfPages() {
     return _document->pages();
 }

@@ -121,6 +121,10 @@ extern "C" {
         pdfDocument.method<&PdfDocument::isLocked>("isLocked", Php::Public);
         pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted", Php::Public);
         pdfDocument.method<&PdfDocument::isLinear>("isLinear", Php::Public);
+
+        pdfDocument.method<&PdfDocument::hasJS>("hasJS", Php::Public);
+        pdfDocument.method<&PdfDocument::hasXFA>("hasXFA", Php::Public);
+
         pdfDocument.method<&PdfDocument::numberOfPages>("getNumberOfPages", Php::Public);
         pdfDocument.method<&PdfDocument::asString>("asString", Php::Public);
         pdfDocument.method<&PdfDocument::toImage>("toImage", Php::Public, {

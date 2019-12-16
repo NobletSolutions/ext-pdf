@@ -10,5 +10,8 @@
     echo "PDF Version: " . $pdfDoc->getMajorVersion() . '.' . $pdfDoc->getMinorVersion() . "\n";
     echo "Is Encrypted: " . (($pdfDoc->isEncrypted() === true) ? 'Yes' : 'No') . "\n";
     echo "Is Linear: " . (($pdfDoc->isLinear() === true) ? 'Yes' : 'No') . "\n";
+
+    echo "Has JS: " . (($pdfDoc->hasJS() === true) ? 'Yes' : 'No') . "\n";
+    echo "Has XFA: " . (($pdfDoc->hasXFA() === true) ? 'Yes' : 'No') . "\n";
     echo "NumPages: " . $pdfDoc->getNumberOfPages() . "\n";
 
