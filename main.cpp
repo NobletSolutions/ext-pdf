@@ -6,6 +6,8 @@
 #include "pdf-writer.h"
 #include "pdf-text.h"
 #include "pdf-image.h"
+#include "pdf-rectangle.h"
+#include "pdf-line.h"
 
 #ifndef VERSION
 #define VERSION "0.11.5"
@@ -62,6 +64,51 @@ extern "C" {
         pdfText.method<&PdfText::getText>("getText", Php::Public);
         pdfText.method<&PdfText::getText>("__toString", Php::Public);
 
+        // PdfRectangle Methods =========================
+        Php::Class<PdfRectangle> pdfRectangle("PdfRectangle");
+        pdfRectangle.method<&PdfRectangle::__construct>("__construct", Php::Public, {
+            Php::ByVal("x", Php::Type::Numeric),
+            Php::ByVal("y", Php::Type::Numeric),
+            Php::ByVal("width", Php::Type::Numeric),
+            Php::ByVal("height", Php::Type::Numeric),
+	    Php::ByVal("red", Php::Type::Numeric,false),
+	    Php::ByVal("green", Php::Type::Numeric,false),
+	    Php::ByVal("blue", Php::Type::Numeric,false)
+        });
+
+        pdfRectangle.method<&PdfRectangle::getX>("getX", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getY>("getY", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getHeight>("getHeight", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getWidth>("getWidth", Php::Public);
+
+	pdfRectangle.method<&PdfRectangle::getRed>("getRed", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getGreen>("getGreen", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getBlue>("getBlue", Php::Public);
+
+        // PdfLine Methods =========================
+        Php::Class<PdfLine> pdfLine("PdfLine");
+        pdfLine.method<&PdfLine::__construct>("__construct", Php::Public, {
+            Php::ByVal("x", Php::Type::Numeric),
+            Php::ByVal("y", Php::Type::Numeric),
+            Php::ByVal("x2", Php::Type::Numeric),
+            Php::ByVal("y2", Php::Type::Numeric),
+            Php::ByVal("red", Php::Type::Numeric,false),
+            Php::ByVal("green", Php::Type::Numeric,false),
+            Php::ByVal("blue", Php::Type::Numeric,false)
+        });
+
+	pdfLine.method<&PdfLine::setWidth>("setWidth", Php::Public, {
+	    Php::ByVal("width", Php::Type::Numeric)
+	});
+	pdfLine.method<&PdfLine::getWidth>("getWidth", Php::Public);
+        pdfLine.method<&PdfLine::getX>("getX", Php::Public);
+        pdfLine.method<&PdfLine::getY>("getY", Php::Public);
+        pdfLine.method<&PdfLine::getX2>("getX2", Php::Public);
+        pdfLine.method<&PdfLine::getY2>("getY2", Php::Public);
+        pdfLine.method<&PdfLine::getRed>("getRed", Php::Public);
+        pdfLine.method<&PdfLine::getGreen>("getGreen", Php::Public);
+        pdfLine.method<&PdfLine::getBlue>("getBlue", Php::Public);
+
         // PdfWriter Methods =========================
         Php::Class<PdfWriter> pdfWriter("PdfWriter");
         pdfWriter.method<&PdfWriter::__construct>("__construct", Php::Public, {
@@ -75,6 +122,16 @@ extern "C" {
         });
 
         pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage", Php::Public, {
+            Php::ByVal("page",Php::Type::Numeric),
+            Php::ByVal("modifications", Php::Type::Array)
+        });
+
+        pdfWriter.method<&PdfWriter::drawRectangleToPage>("drawRectangleToPage", Php::Public, {
+            Php::ByVal("page",Php::Type::Numeric),
+            Php::ByVal("modifications", Php::Type::Array)
+        });
+
+        pdfWriter.method<&PdfWriter::drawLineToPage>("drawLineToPage", Php::Public, {
             Php::ByVal("page",Php::Type::Numeric),
             Php::ByVal("modifications", Php::Type::Array)
         });
@@ -144,6 +201,8 @@ extern "C" {
         myNamespace.add(PdfImageResult);
         myNamespace.add(pdfDocument);
         myNamespace.add(pdfText);
+	myNamespace.add(pdfRectangle);
+	myNamespace.add(pdfLine);
         myNamespace.add(pdfImage);
         myNamespace.add(pdfWriter);
         extension.add(myNamespace);

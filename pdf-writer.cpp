@@ -192,6 +192,66 @@ void PdfWriter::writeImageToPage(Php::Parameters &params) {
     }
 }
 
+void PdfWriter::drawLineToPage(Php::Parameters &params) 
+{
+    if (params[0] < 0) {
+        Php::warning << "Unable to write to a negative page number" << std::flush;
+        throw Php::Exception("Cannot write to a negative page");
+    }
+
+    if (params[1].size() > 0) {
+        double pageIndex = params[0];
+
+        auto search = pageLines.find(pageIndex);
+        if(search != pageLines.end()) {
+            for(auto &iter : params[1]) {
+                PdfLine *obj = new PdfLine(*(PdfLine*) iter.second.implementation());
+                search->second.push_back(obj);
+            }
+        } else {
+            std::vector<PdfLine*> v;
+            for(auto &iter : params[1]) {
+                PdfLine *obj = new PdfLine(*(PdfLine*) iter.second.implementation());
+                v.push_back(obj);
+            }
+
+            pageLines.insert({pageIndex, v});
+        }
+    }
+
+    return;
+}
+
+void PdfWriter::drawRectangleToPage(Php::Parameters &params) 
+{
+    if (params[0] < 0) {
+        Php::warning << "Unable to write to a negative page number" << std::flush;
+        throw Php::Exception("Cannot write to a negative page");
+    }
+
+    if (params[1].size() > 0) {
+        double pageIndex = params[0];
+
+	auto search = pageRectangles.find(pageIndex);
+	if(search != pageRectangles.end()) {
+	    for(auto &iter : params[1]) {
+                PdfRectangle *obj = new PdfRectangle(*(PdfRectangle*) iter.second.implementation());
+		search->second.push_back(obj);
+	    }
+	} else {
+	    std::vector<PdfRectangle*> v;
+	    for(auto &iter : params[1]) {
+                PdfRectangle *obj = new PdfRectangle(*(PdfRectangle*) iter.second.implementation());
+                v.push_back(obj);
+            }
+
+	    pageRectangles.insert({pageIndex, v});
+	}
+    }
+
+    return;
+}
+
 void PdfWriter::writeTextToPage(Php::Parameters &params)
 {
     if (params[0] < 0) {
@@ -225,8 +285,6 @@ void PdfWriter::writeTextToPage(Php::Parameters &params)
 
             pageText.insert({pageIndex,v});
         }
-
-        return;
     }
 
     return;
@@ -409,6 +467,25 @@ void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentConte
     contentContext->DrawImage((double)image->getX(), (double)image->getY(), image->getImagePath());
 }
 
+void PdfWriter::writeRectangle(PdfRectangle *rect, AbstractContentContext *contentContext) {
+    AbstractContentContext::GraphicOptions options(AbstractContentContext::eFill, AbstractContentContext::eRGB, rect->getColor());
+
+    contentContext->DrawRectangle((double)rect->getX(), (double)rect->getY(), (double)rect->getWidth(), (double)rect->getHeight(), options);
+
+}
+
+void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext) {
+    //Php::out << "Writing a line" << std::endl;
+
+    AbstractContentContext::GraphicOptions options(AbstractContentContext::eStroke, AbstractContentContext::eRGB, line->getColor(), line->getWidth());
+    DoubleAndDoublePairList pathPoints;
+
+    pathPoints.push_back(DoubleAndDoublePair(line->getX(), line->getY()));
+    pathPoints.push_back(DoubleAndDoublePair(line->getX2(), line->getY2()));
+
+    contentContext->DrawPath(pathPoints, options);
+}
+
 void PdfWriter::writePdf(Php::Parameters &params) {
     // Iterate and print keys and values of unordered_map
     for (const auto &n : pageText ) {
@@ -445,6 +522,26 @@ void PdfWriter::writePdf(Php::Parameters &params) {
                 pageImages.erase(images);
             }
 
+	    auto rectangles = pageRectangles.find(n.first);
+	    if (rectangles != pageRectangles.end()) {
+                for (const auto &i : rectangles->second) {
+		    this->writeRectangle(i, contentContext);
+		    delete i;
+		}
+
+		pageRectangles.erase(rectangles);
+	    }
+
+	    auto lines = pageLines.find(n.first);
+	    if (lines != pageLines.end()) {
+                for (const auto &i : lines->second) {
+		    this->writeLine(i, contentContext);
+		    delete i;
+		}
+
+		pageLines.erase(lines);
+	    }
+
             thePage.EndContentContext();
         }
 
@@ -467,8 +564,38 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         thePage.WritePage();
     }
 
+    for (const auto& i : pageRectangles) {
+        PDFModifiedPage thePage(&writer, i.first, true);
+        AbstractContentContext* contentContext = thePage.StartContentContext();
+        if (contentContext) {
+            for (const auto& rectangle : i.second) {
+                this->writeRectangle(rectangle, contentContext);
+                delete rectangle;
+            }
+            thePage.EndContentContext();
+        }
+
+        thePage.WritePage();
+    }
+
+    for (const auto& i : pageLines) {
+        PDFModifiedPage thePage(&writer, i.first, true);
+        AbstractContentContext* contentContext = thePage.StartContentContext();
+        if (contentContext) {
+            for (const auto& line : i.second) {
+                this->writeLine(line, contentContext);
+                delete line;
+            }
+            thePage.EndContentContext();
+        }
+
+        thePage.WritePage();
+    }
+
     pageText.clear();
     pageImages.clear();
+    pageRectangles.clear();
+    pageLines.clear();
     writer.EndPDF();
 
     // requesting only particular pages

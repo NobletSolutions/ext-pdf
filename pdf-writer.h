@@ -17,6 +17,8 @@
 #include <unordered_map>
 #include "pdf-image.h"
 #include "pdf-text.h"
+#include "pdf-rectangle.h"
+#include "pdf-line.h"
 
 void initializeFonts();
 std::vector<std::string> getFonts();
@@ -38,12 +40,19 @@ private:
     std::string _outputFileName;
     std::unordered_map<double,std::vector<PdfImage*>> pageImages;
     std::unordered_map<double,std::vector<PdfText*>> pageText;
+    std::unordered_map<double,std::vector<PdfRectangle*>> pageRectangles;
+    std::unordered_map<double,std::vector<PdfLine*>> pageLines;
+
     void writeText(PdfText *obj, int pageRotation, const PDFRectangle &mediaBox, AbstractContentContext *contentContext);
     void writeImage(PdfImage *image, AbstractContentContext *contentContext);
+    void writeRectangle(PdfRectangle *rect, AbstractContentContext *contentContext);
+    void writeLine(PdfLine *line, AbstractContentContext *contentContext);
 public:
     PdfWriter();
     void __construct(Php::Parameters &params);
     void writeTextToPage(Php::Parameters &params);
+    void drawRectangleToPage(Php::Parameters &params);
+    void drawLineToPage(Php::Parameters &params);
     void writeImageToPage(Php::Parameters &params);
     void writePdf(Php::Parameters &params);
     void setFont(Php::Parameters &params);
