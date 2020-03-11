@@ -264,8 +264,7 @@ void PdfWriter::writeTextToPage(Php::Parameters &params)
         throw Php::Exception("No font set!");
     }
 
-    if (params[1].size() > 0)
-    {
+    if (params[1].size() > 0) {
         double pageIndex = params[0];
 
         auto search = pageText.find(pageIndex);
@@ -275,6 +274,7 @@ void PdfWriter::writeTextToPage(Php::Parameters &params)
                 PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
                 search->second.push_back(obj);
             }
+
         } else {
             std::vector<PdfText*> v;
 
@@ -471,7 +471,6 @@ void PdfWriter::writeRectangle(PdfRectangle *rect, AbstractContentContext *conte
     AbstractContentContext::GraphicOptions options(AbstractContentContext::eFill, AbstractContentContext::eRGB, rect->getColor());
 
     contentContext->DrawRectangle((double)rect->getX(), (double)rect->getY(), (double)rect->getWidth(), (double)rect->getHeight(), options);
-
 }
 
 void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext) {
@@ -487,109 +486,68 @@ void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext)
 }
 
 void PdfWriter::writePdf(Php::Parameters &params) {
-    // Iterate and print keys and values of unordered_map
-    for (const auto &n : pageText ) {
-//      Php::out << "PageText: [" << n.first << "] TextCount: [" << n.second.size() << "]\n";
 
-        PDFModifiedPage thePage(&writer, n.first, true);
+    int pagePos = 0;
+    while (true) {
+        // Php::out << "Page Index: " << pagePos << std::endl;
+
+        PDFModifiedPage thePage(&writer, pagePos, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
-        if (contentContext) {
-            PDFObject* page = writer.GetModifiedFileParser().ParsePage(n.first);
-            PDFPageInput pageInput(&writer.GetModifiedFileParser(), page);
-            PDFRectangle mediaBox = pageInput.GetMediaBox();
-            int pageRotation      = pageInput.GetRotate();
+        if (!contentContext) {
+            break;
+        }
 
-            // iterate over each PdfText point
-            for (const auto &iter : n.second) {
+        PDFObject* page = writer.GetModifiedFileParser().ParsePage(pagePos);
+        PDFPageInput pageInput(&writer.GetModifiedFileParser(), page);
+        PDFRectangle mediaBox = pageInput.GetMediaBox();
+        int pageRotation      = pageInput.GetRotate();
+
+        auto textSearch = pageText.find(pagePos);
+        if (textSearch != pageText.end()) {
+             // iterate over each PdfText point
+            for (const auto &iter : textSearch->second) {
                 this->writeText(iter, pageRotation, mediaBox, contentContext);
                 //Php::out << "Delete iter" << std::endl;
                 delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
             }
-
-            // see if there are images destined for this page and write them at the same time
-            auto images = pageImages.find(n.first);
-
-            if (images != pageImages.end()) {
-                //Php::out << "Have Images: " << images->second.size() << std::endl;
-
-                for (const auto& i : images->second) {
-                    //Php::out << "\tImage: [" << i->getImagePath() << "]\n";
-                    this->writeImage(i, contentContext);
-                    delete i;
-                }
-
-                pageImages.erase(images);
-            }
-
-	    auto rectangles = pageRectangles.find(n.first);
-	    if (rectangles != pageRectangles.end()) {
-                for (const auto &i : rectangles->second) {
-		    this->writeRectangle(i, contentContext);
-		    delete i;
-		}
-
-		pageRectangles.erase(rectangles);
-	    }
-
-	    auto lines = pageLines.find(n.first);
-	    if (lines != pageLines.end()) {
-                for (const auto &i : lines->second) {
-		    this->writeLine(i, contentContext);
-		    delete i;
-		}
-
-		pageLines.erase(lines);
-	    }
-
-            thePage.EndContentContext();
         }
 
-        thePage.WritePage();
-    }
+        // see if there are images destined for this page and write them at the same time
+        auto images = pageImages.find(pagePos);
 
-//    Php::out << "Image Pages Left: " << pageImages.size() << std::endl;
-    for (const auto& i : pageImages ) {
-        PDFModifiedPage thePage(&writer, i.first, true);
-        AbstractContentContext* contentContext = thePage.StartContentContext();
-        if (contentContext) {
-            // Php::out << "PageImages:[" << i.first << "] NumImages: ["<< i.second.size() <<"]\n";
-            for (const auto& image : i.second) {
-                this->writeImage(image, contentContext);
-                delete image;
+        if (images != pageImages.end()) {
+            //Php::out << "Have Images: " << images->second.size() << std::endl;
+
+            for (const auto& i : images->second) {
+                //Php::out << "\tImage: [" << i->getImagePath() << "]\n";
+                this->writeImage(i, contentContext);
+                delete i;
             }
-            thePage.EndContentContext();
+
+            pageImages.erase(images);
         }
 
-        thePage.WritePage();
-    }
-
-    for (const auto& i : pageRectangles) {
-        PDFModifiedPage thePage(&writer, i.first, true);
-        AbstractContentContext* contentContext = thePage.StartContentContext();
-        if (contentContext) {
-            for (const auto& rectangle : i.second) {
-                this->writeRectangle(rectangle, contentContext);
-                delete rectangle;
+        auto rectangles = pageRectangles.find(pagePos);
+        if (rectangles != pageRectangles.end()) {
+            for (const auto &i : rectangles->second) {
+                this->writeRectangle(i, contentContext);
+                delete i;
             }
-            thePage.EndContentContext();
         }
 
-        thePage.WritePage();
-    }
-
-    for (const auto& i : pageLines) {
-        PDFModifiedPage thePage(&writer, i.first, true);
-        AbstractContentContext* contentContext = thePage.StartContentContext();
-        if (contentContext) {
-            for (const auto& line : i.second) {
-                this->writeLine(line, contentContext);
-                delete line;
+        auto lines = pageLines.find(pagePos);
+        if (lines != pageLines.end()) {
+            for (const auto &i : lines->second) {
+                this->writeLine(i, contentContext);
+                delete i;
             }
-            thePage.EndContentContext();
         }
 
+        thePage.EndContentContext();
         thePage.WritePage();
+
+        pagePos++;
     }
 
     pageText.clear();
