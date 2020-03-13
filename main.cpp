@@ -63,6 +63,12 @@ extern "C" {
         pdfText.method<&PdfText::getY>("getY", Php::Public);
         pdfText.method<&PdfText::getText>("getText", Php::Public);
         pdfText.method<&PdfText::getText>("__toString", Php::Public);
+        pdfText.method<&PdfText::getColor>("getColor", Php::Public);
+        pdfText.method<&PdfText::setColor>("setColor", Php::Public, {
+            Php::ByVal("color_or_red", Php::Type::Numeric),
+            Php::ByVal("green", Php::Type::Numeric, false),
+            Php::ByVal("blue", Php::Type::Numeric, false),
+        });
 
         // PdfRectangle Methods =========================
         Php::Class<PdfRectangle> pdfRectangle("PdfRectangle");

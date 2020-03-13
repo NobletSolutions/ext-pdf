@@ -136,7 +136,7 @@ void PdfWriter::__construct(Php::Parameters &params) {
     initializeFonts();
 }
 
-AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize) {
+AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize, int64_t colorValue) {
     std::map<std::string,std::string>::iterator it;
     PDFUsedFont * _font;
 
@@ -153,8 +153,8 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
             Php::warning << "Unable to locate font " << requestedFont << std::flush;
             throw Php::Exception("Unable to locate font");
         }
-
-        return new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, 0);
+//Php::out << "Font: " << requestedFont << " Size: " << inFontSize << " Color: " << colorValue << std::endl;
+        return new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, colorValue);
     }
 
     Php::warning << "No such font: " << requestedFont << std::flush;
@@ -164,9 +164,9 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
 void PdfWriter::setFont(Php::Parameters &params) {
     defaultFontName.assign(params[0].stringValue());
     if (params.size() == 2) {
-        defaultText = this->getFont(params[0].stringValue(), (double)params[1]);
+        defaultText = this->getFont(params[0].stringValue(), (double)params[1], 0);
     } else if (params.size() == 1) {
-        defaultText = this->getFont(params[0].stringValue(), 10);
+        defaultText = this->getFont(params[0].stringValue(), 10, 0);
     }
 }
 
@@ -425,7 +425,7 @@ void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &me
 //    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
     AbstractContentContext::TextOptions * options = NULL;
 
-    if (obj->getFontSize() || obj->getFont() ) {
+    if (obj->getFontSize() || obj->getFont() || obj->getColor() != 0) {
         int _fontSize = 10;
         std::string fontName(obj->getFont().stringValue());
         if (fontName.empty()) {
@@ -435,8 +435,8 @@ void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &me
         if (obj->getFontSize()) {
             _fontSize = (int)obj->getFontSize();
         }
-
-        options = this->getFont(fontName, _fontSize);
+        // Php::out << "Font/size/color requested: " << obj->getColor() << std::endl;
+        options = this->getFont(fontName, _fontSize, obj->getColor());
     } else {
         options = defaultText;
     }

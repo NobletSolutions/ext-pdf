@@ -35,7 +35,7 @@ private:
     PDFUsedFont * defaultFont;// = NULL;
     AbstractContentContext::TextOptions * defaultText;// = NULL;
     int64_t pageNum = -1;
-    AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10);
+    AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10, int64_t color = 0);
     std::string _inputFileName;
     std::string _outputFileName;
     std::unordered_map<double,std::vector<PdfImage*>> pageImages;

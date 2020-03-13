@@ -15,6 +15,7 @@ private:
     int64_t x = 0;
     int64_t y = 0;
     int64_t fontSize = 10;
+    int64_t color = 0;
     std::string text;
     std::string font;
 public:
@@ -26,6 +27,8 @@ public:
     Php::Value getText();
     Php::Value getFontSize();
     Php::Value getFont();
+    Php::Value getColor();
+    void setColor(Php::Parameters &params);
 };
 
 #endif /* PDF_TEXT_H_ */
