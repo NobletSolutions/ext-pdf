@@ -136,11 +136,11 @@ Php::Value PdfDocument::isLocked() {
 }
 
 Php::Value PdfDocument::hasJS() {
-    return false;// _document->has_js();
+    return _document->has_js();
 }
 
 Php::Value PdfDocument::hasXFA() {
-    return false; //_document->has_xfa();
+    return _document->has_xfa();
 }
 
 Php::Value PdfDocument::numberOfPages() {
