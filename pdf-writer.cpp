@@ -153,12 +153,12 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
             Php::warning << "Unable to locate font " << requestedFont << std::flush;
             throw Php::Exception("Unable to locate font");
         }
-//Php::out << "Font: " << requestedFont << " Size: " << inFontSize << " Color: " << colorValue << std::endl;
+
         return new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, colorValue);
     }
 
     Php::warning << "No such font: " << requestedFont << std::flush;
-    throw Php::Exception("No such font");
+    throw Php::Exception("No such font " + requestedFont);
 }
 
 void PdfWriter::setFont(Php::Parameters &params) {
@@ -182,11 +182,8 @@ void PdfWriter::writeImageToPage(Php::Parameters &params) {
 
     auto search = pageImages.find(pageIndex);
     if (search != pageImages.end()) {
-//        Php::out << "["<< pageIndex << "] Added (pushed) " << image->getImagePath() << std::endl;
         search->second.push_back(image);
     } else {
-//        Php::out << "["<< pageIndex << "] Added (new) " << image->getImagePath() << std::endl;
-
         std::vector<PdfImage*> v = {image};
         pageImages.insert({pageIndex,v});
     }
@@ -383,8 +380,6 @@ void positionText(int pageRotation, PDFRectangle mediaBox, AbstractContentContex
             break;
     }
 
-    //Php::out << a << " " << b << " " << c << " " << d << " " << e << " " << f << " Tm" << std::endl;
-
     contentContext->Tm(a, b, c, d, e, f);
 }
 
@@ -416,13 +411,11 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
         return;
     }
 
-    //Php::out << "No new line: " << text << std::endl;
     contentContext->Tj(text);
     contentContext->ET();
 }
 
 void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &mediaBox, AbstractContentContext *contentContext) {
-//    Php::out << "Get X" << obj->getX() << " " << obj->getText() << std::endl;
     AbstractContentContext::TextOptions * options = NULL;
 
     if (obj->getFontSize() || obj->getFont() || obj->getColor() != 0) {
@@ -435,7 +428,7 @@ void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &me
         if (obj->getFontSize()) {
             _fontSize = (int)obj->getFontSize();
         }
-        // Php::out << "Font/size/color requested: " << obj->getColor() << std::endl;
+
         options = this->getFont(fontName, _fontSize, obj->getColor());
     } else {
         options = defaultText;
@@ -474,8 +467,6 @@ void PdfWriter::writeRectangle(PdfRectangle *rect, AbstractContentContext *conte
 }
 
 void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext) {
-    //Php::out << "Writing a line" << std::endl;
-
     AbstractContentContext::GraphicOptions options(AbstractContentContext::eStroke, AbstractContentContext::eRGB, line->getColor(), line->getWidth());
     DoubleAndDoublePairList pathPoints;
 
@@ -489,8 +480,6 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
     int pagePos = 0;
     while (true) {
-        // Php::out << "Page Index: " << pagePos << std::endl;
-
         PDFModifiedPage thePage(&writer, pagePos, true);
         AbstractContentContext* contentContext = thePage.StartContentContext();
 
@@ -517,10 +506,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         auto images = pageImages.find(pagePos);
 
         if (images != pageImages.end()) {
-            //Php::out << "Have Images: " << images->second.size() << std::endl;
-
             for (const auto& i : images->second) {
-                //Php::out << "\tImage: [" << i->getImagePath() << "]\n";
                 this->writeImage(i, contentContext);
                 delete i;
             }
@@ -644,7 +630,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
     const double PAGE_WIDTH = 612;
     const double PAGE_HEIGHT = 792;
 
-    //Php::out << "Creating " << destinationFile << std::endl;
     status = pdfWriter.StartPDF(destinationFile, ePDFVersion17);
     if (status != eSuccess) {
         Php::warning << "Unable to open " << destinationFile << std::flush;
@@ -656,16 +641,12 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
     for (auto &iter : params[0]) {
         if (file_exists(iter.second.stringValue()))
         {
-            //Php::out << "\tWith: " << iter.second.stringValue() << std::endl;
-
             int mime = determineMimeType(iter.second.stringValue());
             if (UNSUPPORTED_TYPE == mime) {
-                //Php::warning << iter.second.stringValue() << " is an unsupported file type" << std::flush;
                 return false;
             }
 
             if (PDF_TYPE == mime) {
-                //Php::warning << "PDF embedding: " << iter.second.stringValue() << std::flush;
                 copyingContext = pdfWriter.CreatePDFCopyingContext(iter.second.stringValue());
                 if (copyingContext)
                 {
@@ -695,34 +676,19 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
                             double scaledWidth = (PAGE_WIDTH-40)/width;
                             double scaledHeight = (PAGE_HEIGHT-40)/height;
 
-                            // Php::out << "U: " << mediaBox.UpperRightX << "x" << mediaBox.UpperRightY << std::endl;
-                            // Php::out << "L: " << mediaBox.LowerLeftX << "x" << mediaBox.LowerLeftY << std::endl;
-                            // Php::out << "DIV: " << PAGE_WIDTH << "/" << width << " " << scaledWidth << std::endl;
-                            // Php::out << "DIV: " << PAGE_HEIGHT << "/" << height << " " << scaledHeight << std::endl;
-
                             /* we scale the height to place the document in the middle of the page */
                             double heightPlacementAdjustment = 20;
                             double tmpAdjustment = ((PAGE_HEIGHT-height)*scaledHeight)/2;
                             if (height < PAGE_HEIGHT) {
-                                //Php::out << "height < PAGE_HEIGHT " << height << " < " << PAGE_HEIGHT << std::endl;
                                 heightPlacementAdjustment += tmpAdjustment;
                             }
-                            // else if (height > PAGE_HEIGHT) {
-                            //     //Php::out << "height > PAGE_HEIGHT " << height << " > " << PAGE_HEIGHT << std::endl;
-                            //     heightPlacementAdjustment -= tmpAdjustment;
-                            // }
-
-                            // Php::out << "Adjustment Amount: " << tmpAdjustment << std::endl;
-                            // Php::out << "heightPlacementAdjustment: " << heightPlacementAdjustment << std::endl;
 
                             // place scaled page
                             pageContent->q();
                             pageContent->cm(scaledWidth < scaledHeight ? scaledWidth:scaledHeight, 0, 0, scaledWidth < scaledHeight ? scaledWidth:scaledHeight, 20, heightPlacementAdjustment);
                             pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
                             pageContent->Q();
-                        }
-                        else
-                        {
+                        } else {
                             pageContent->q();
                             pageContent->cm(1, 0, 0, 1, 0, 0);
                             pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
@@ -742,8 +708,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
                 opt1.transformationMethod = AbstractContentContext::eFit;
                 opt1.fitProportional = true;
 
-                //Php::warning << "Image embedding: " << iter.second.stringValue() << std::flush;
-
                 PDFPage* page = new PDFPage();
                 page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
                 PageContentContext* cxt = pdfWriter.StartPageContentContext(page);
@@ -753,7 +717,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
             }
         } else {
             pdfWriter.EndPDF();
-            //Php::warning << "\t " << iter.second.stringValue() << " doesn't exist!" << std::flush;
             return false;
         }
     }
