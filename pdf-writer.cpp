@@ -492,16 +492,6 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         PDFRectangle mediaBox = pageInput.GetMediaBox();
         int pageRotation      = pageInput.GetRotate();
 
-        auto textSearch = pageText.find(pagePos);
-        if (textSearch != pageText.end()) {
-             // iterate over each PdfText point
-            for (const auto &iter : textSearch->second) {
-                this->writeText(iter, pageRotation, mediaBox, contentContext);
-                //Php::out << "Delete iter" << std::endl;
-                delete iter; //deleted because it was new PdfText() in our writeTextToPage calls
-            }
-        }
-
         // see if there are images destined for this page and write them at the same time
         auto images = pageImages.find(pagePos);
 
@@ -527,6 +517,14 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             for (const auto &i : lines->second) {
                 this->writeLine(i, contentContext);
                 delete i;
+            }
+        }
+
+        auto textSearch = pageText.find(pagePos);
+        if (textSearch != pageText.end()) {
+            for (const auto &iter : textSearch->second) {
+                this->writeText(iter, pageRotation, mediaBox, contentContext);
+                delete iter;
             }
         }
 
