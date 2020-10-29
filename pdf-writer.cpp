@@ -271,7 +271,6 @@ void PdfWriter::writeTextToPage(Php::Parameters &params)
                 PdfText *obj = new PdfText(*(PdfText *) iter.second.implementation());
                 search->second.push_back(obj);
             }
-
         } else {
             std::vector<PdfText*> v;
 
@@ -492,15 +491,6 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         PDFRectangle mediaBox = pageInput.GetMediaBox();
         int pageRotation      = pageInput.GetRotate();
 
-        // find text
-        auto textSearch = pageText.find(pagePos);
-        if (textSearch != pageText.end()) {
-            for (const auto &iter : textSearch->second) {
-                this->writeText(iter, pageRotation, mediaBox, contentContext);
-                delete iter;
-            }
-        }
-
         // see if there are images destined for this page and write them at the same time
         auto images = pageImages.find(pagePos);
 
@@ -526,6 +516,15 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             for (const auto &i : lines->second) {
                 this->writeLine(i, contentContext);
                 delete i;
+            }
+        }
+
+        // find text - written last to be on "top"
+        auto textSearch = pageText.find(pagePos);
+        if (textSearch != pageText.end()) {
+            for (const auto &iter : textSearch->second) {
+                this->writeText(iter, pageRotation, mediaBox, contentContext);
+                delete iter;
             }
         }
 
