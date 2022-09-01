@@ -135,6 +135,7 @@ Php::Value PdfDocument::isLocked() {
     return _document->is_locked();
 }
 
+#if POPPLER_HAS_JS == 1
 Php::Value PdfDocument::hasJS() {
     return _document->has_js();
 }
@@ -142,6 +143,7 @@ Php::Value PdfDocument::hasJS() {
 Php::Value PdfDocument::hasXFA() {
     return _document->has_xfa();
 }
+#endif
 
 Php::Value PdfDocument::numberOfPages() {
     return _document->pages();

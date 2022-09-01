@@ -83,7 +83,7 @@ LINKER				=	g++
 #	one: the PHP-CPP library), you should update the LINKER_DEPENDENCIES variable
 #	with a list of all flags that should be passed to the linker.
 #
-
+POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-document.h)
 COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS)
 LINKER_FLAGS		=	-shared
 LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
@@ -115,7 +115,7 @@ OBJECTS				=	$(SOURCES:%.cpp=%.o)
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
+COMPILE.cpp = POPPLER_HAS_JS="$(POPPLER_HAS_JS)" $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
 
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 
