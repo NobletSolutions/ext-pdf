@@ -19,6 +19,11 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <iterator>
 #include <map>
 #include <string>
@@ -476,7 +481,6 @@ void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext)
 }
 
 void PdfWriter::writePdf(Php::Parameters &params) {
-
     int pagePos = 0;
     while (true) {
         PDFModifiedPage thePage(&writer, pagePos, true);
@@ -542,10 +546,20 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
     // requesting only particular pages
     if (!params.empty()) {
-        std::string tempfile = std::tmpnam(nullptr);
+        char tempFileName[] = "/tmp/fileXXXXXX";
+        int fd;
+
+        if ((fd = mkstemp(tempFileName)) == -1) {
+            fprintf(stderr, "Failed with error %s\n", strerror(errno));
+            return;
+        }
+
+        unlink(tempFileName);
+
+        FILE *fh = fdopen(fd, "w");
 
         std::ifstream  src(_outputFileName.c_str(), std::ios::binary);
-        std::ofstream  dst(tempfile.c_str(), std::ios::binary);
+        std::ofstream  dst(tempFileName, std::ios::binary);
 
         dst << src.rdbuf();
 
@@ -575,9 +589,9 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             throw Php::Exception("Unable to open file");
         }
 
-        writer2.AppendPDFPagesFromPDF(tempfile, pageRange);
+        writer2.AppendPDFPagesFromPDF(tempFileName, pageRange);
         writer2.EndPDF();
-        std::remove(tempfile.c_str());
+        fclose(fh);
     }
 }
 
