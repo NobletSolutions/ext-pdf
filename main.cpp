@@ -38,7 +38,7 @@ extern "C" {
             Php::ByVal("x", Php::Type::Numeric),
             Php::ByVal("y", Php::Type::Numeric),
             Php::ByVal("imagepath", Php::Type::String),
-			Php::ByVal("index", Php::Type::Numeric, false),
+            Php::ByVal("index", Php::Type::Numeric, false),
             Php::ByVal("width", Php::Type::Numeric, false),
             Php::ByVal("height", Php::Type::Numeric, false)
         });
@@ -76,9 +76,9 @@ extern "C" {
             Php::ByVal("y", Php::Type::Numeric),
             Php::ByVal("width", Php::Type::Numeric),
             Php::ByVal("height", Php::Type::Numeric),
-	    Php::ByVal("red", Php::Type::Numeric,false),
-	    Php::ByVal("green", Php::Type::Numeric,false),
-	    Php::ByVal("blue", Php::Type::Numeric,false)
+            Php::ByVal("red", Php::Type::Numeric,false),
+            Php::ByVal("green", Php::Type::Numeric,false),
+            Php::ByVal("blue", Php::Type::Numeric,false)
         });
 
         pdfRectangle.method<&PdfRectangle::getX>("getX", Php::Public);
@@ -86,7 +86,7 @@ extern "C" {
         pdfRectangle.method<&PdfRectangle::getHeight>("getHeight", Php::Public);
         pdfRectangle.method<&PdfRectangle::getWidth>("getWidth", Php::Public);
 
-	pdfRectangle.method<&PdfRectangle::getRed>("getRed", Php::Public);
+        pdfRectangle.method<&PdfRectangle::getRed>("getRed", Php::Public);
         pdfRectangle.method<&PdfRectangle::getGreen>("getGreen", Php::Public);
         pdfRectangle.method<&PdfRectangle::getBlue>("getBlue", Php::Public);
 
@@ -102,10 +102,10 @@ extern "C" {
             Php::ByVal("blue", Php::Type::Numeric,false)
         });
 
-	pdfLine.method<&PdfLine::setWidth>("setWidth", Php::Public, {
-	    Php::ByVal("width", Php::Type::Numeric)
-	});
-	pdfLine.method<&PdfLine::getWidth>("getWidth", Php::Public);
+        pdfLine.method<&PdfLine::setWidth>("setWidth", Php::Public, {
+            Php::ByVal("width", Php::Type::Numeric)
+        });
+        pdfLine.method<&PdfLine::getWidth>("getWidth", Php::Public);
         pdfLine.method<&PdfLine::getX>("getX", Php::Public);
         pdfLine.method<&PdfLine::getY>("getY", Php::Public);
         pdfLine.method<&PdfLine::getX2>("getX2", Php::Public);
@@ -123,7 +123,7 @@ extern "C" {
 
         pdfWriter.method<&PdfWriter::getAllFonts>("getAllFonts", Php::Public);
         pdfWriter.method<&PdfWriter::setFont>("setFont", Php::Public, {
-			Php::ByVal("font",Php::Type::String)
+            Php::ByVal("font",Php::Type::String)
         });
 
         pdfWriter.method<&PdfWriter::writeTextToPage>("writeTextToPage", Php::Public, {
@@ -184,7 +184,7 @@ extern "C" {
         pdfDocument.method<&PdfDocument::isEncrypted>("isEncrypted", Php::Public);
         pdfDocument.method<&PdfDocument::isLinear>("isLinear", Php::Public);
 #if POPPLER_HAS_JS == 1
-	pdfDocument.method<&PdfDocument::hasJS>("hasJS", Php::Public);
+        pdfDocument.method<&PdfDocument::hasJS>("hasJS", Php::Public);
         pdfDocument.method<&PdfDocument::hasXFA>("hasXFA", Php::Public);
 #endif
         pdfDocument.method<&PdfDocument::numberOfPages>("getNumberOfPages", Php::Public);
@@ -203,13 +203,13 @@ extern "C" {
         pdfDocument.method<&hashDocument>("hashDocument", Php::Public, {Php::ByVal("file", Php::Type::String)});
 
         myNamespace.add<fonts>("getFonts");
-        myNamespace.add(PdfImageResult);
-        myNamespace.add(pdfDocument);
-        myNamespace.add(pdfText);
-	myNamespace.add(pdfRectangle);
-	myNamespace.add(pdfLine);
-        myNamespace.add(pdfImage);
-        myNamespace.add(pdfWriter);
+        myNamespace.add(std::move(PdfImageResult));
+        myNamespace.add(std::move(pdfDocument));
+        myNamespace.add(std::move(pdfText));
+        myNamespace.add(std::move(pdfRectangle));
+        myNamespace.add(std::move(pdfLine));
+        myNamespace.add(std::move(pdfImage));
+        myNamespace.add(std::move(pdfWriter));
         extension.add(myNamespace);
 
         // return the extension
