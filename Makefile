@@ -29,7 +29,7 @@ VERSION	= 0.11.19
 #	one for each extension. Use this variable to specify this directory.
 #
 
-INI_DIR				=	/etc/php.d
+INI_DIR				=	$(shell php-config --ini-dir)
 
 #
 #	The extension dirs
@@ -136,7 +136,11 @@ ${EXTENSION}:			${OBJECTS}
 install:		
 						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
 						${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
-				
+
+uninstall:
+		rm $(DESTDIR)/${EXTENSION_DIR}/${EXTENSION}
+		rm $(DESTDIR)/${INI_DIR}/60-${INI}
+
 clean:
 						${RM} ${EXTENSION} ${OBJECTS}
 
