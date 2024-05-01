@@ -25,6 +25,7 @@ public:
     Php::Value getX();
     Php::Value getY();
     Php::Value getText();
+    Php::Value __toString();
     Php::Value getFontSize();
     Php::Value getFont();
     Php::Value getColor();

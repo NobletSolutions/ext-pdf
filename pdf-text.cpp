@@ -53,6 +53,10 @@ Php::Value PdfText::getText() {
     return text;
 }
 
+Php::Value PdfText::__toString() {
+    return getText();
+}
+
 Php::Value PdfText::getFontSize() {
     return fontSize;
 }
