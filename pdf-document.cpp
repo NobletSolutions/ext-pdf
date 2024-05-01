@@ -83,23 +83,41 @@ Php::Value PdfDocument::getCreator(){
 
 Php::Value PdfDocument::getCreationDate(){
     char buffer[50];
+#if POPPLER_HAS_NEW_DATE_T == 1
+    time_t t = _document->info_date_t("CreationDate");
+    if(t == -1) {
+        return nullptr;
+    }
+
+    snprintf(buffer, 50, "@%lu", t);
+#else 
     poppler::time_type t = _document->info_date("CreationDate");
     if(t == UINT_MAX) {
         return nullptr;
     }
 
     snprintf(buffer,50,"@%u",t);
+#endif
     return Php::Object("DateTime", buffer);
 }
 
 Php::Value PdfDocument::getModifiedDate() {
     char buffer[50];
+#if POPPLER_HAS_NEW_DATE_T == 1
+    time_t t = _document->info_date_t("ModDate");
+    if(t == -1) {
+        return nullptr;
+    }
+
+    snprintf(buffer, 50, "@%lu", t);
+#else
     poppler::time_type t = _document->info_date("ModDate");
     if(t == UINT_MAX) {
         return nullptr;
     }
 
     snprintf(buffer,50,"@%u",t);
+#endif
     return Php::Object("DateTime", buffer);
 }
 

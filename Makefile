@@ -84,6 +84,7 @@ LINKER				=	g++
 #	with a list of all flags that should be passed to the linker.
 #
 POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-document.h)
+POPPLER_HAS_NEW_DATE_T := $(shell grep -qn info_date_t /usr/include/poppler/cpp/poppler-document.h)
 COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS)
 LINKER_FLAGS		=	-shared
 LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
