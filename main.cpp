@@ -172,9 +172,9 @@ extern "C" {
         PdfImageResult.method<&PdfImageResult::getPage>("getPage", Php::Public);
 
         Php::Class<PdfDocument> pdfDocument("PdfDocument");
-        pdfDocument.constant("IMAGE_JPEG", 1);
-        pdfDocument.constant("IMAGE_PNG", 2);
-        pdfDocument.constant("IMAGE_TIFF", 3);
+        pdfDocument.property("IMAGE_JPEG", 1, Php::Const|Php::Public);
+        pdfDocument.property("IMAGE_PNG", 2, Php::Const|Php::Public);
+        pdfDocument.property("IMAGE_TIFF", 3, Php::Const|Php::Public);
 
         pdfDocument.method<&PdfDocument::__construct>("__construct", Php::Public, {
             Php::ByVal("file", Php::Type::String),
@@ -198,9 +198,12 @@ extern "C" {
         pdfDocument.method<&PdfDocument::numberOfPages>("getNumberOfPages", Php::Public);
         pdfDocument.method<&PdfDocument::asString>("asString", Php::Public);
         pdfDocument.method<&PdfDocument::toImage>("toImage", Php::Public, {
-            Php::ByVal("format", Php::Type::Constant),
+            // Ideally this would be Php::Type::Constant but php-cpp crashes when reflecting this method and I don't know how to specify *which* constant it applies to
+            // Somehow when this is Php::Type::Constant it crashes in PHP 8.1 but didn't stop phpstan from functioning like it does in 8.3.
+            // Once PHP-CPP supports type hinted class constants this could be changed at that point. 
+            Php::ByVal("format", Php::Type::Numeric),
             Php::ByVal("output", Php::Type::String),
-            Php::ByVal("dpi", Php::Type::Numeric,false)
+            Php::ByVal("dpi", Php::Type::Numeric, false)
         });
 
         pdfDocument.method<&PdfDocument::compare>("compare", Php::Public, {
