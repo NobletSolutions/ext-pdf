@@ -13,6 +13,14 @@
 #define VERSION "0.11.5"
 #endif
 
+#ifndef POPPLER_HAS_JS
+#define POPPLER_HAS_JS 0
+#endif
+
+#ifndef POPPLER_HAS_NEW_DATE_T
+#define POPPLER_HAS_NEW_DATE_T 0
+#endif
+
 /**
  *  tell the compiler that the get_module is a pure C function
  */

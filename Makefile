@@ -83,9 +83,11 @@ LINKER				=	g++
 #	one: the PHP-CPP library), you should update the LINKER_DEPENDENCIES variable
 #	with a list of all flags that should be passed to the linker.
 #
-POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-document.h)
-POPPLER_HAS_NEW_DATE_T := $(shell grep -qn info_date_t /usr/include/poppler/cpp/poppler-document.h)
-COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS)
+POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-document.h && echo 1 || echo 0)
+POPPLER_HAS_NEW_DATE_T := $(shell grep -qn info_date_t /usr/include/poppler/cpp/poppler-document.h && echo 1 || echo 0)
+
+COMPILER_DEFINES    = -DVERSION=\"${VERSION}\" -DPOPPLER_HAS_NEW_DATE_T=${POPPLER_HAS_NEW_DATE_T} -DPOPPLER_HAS_JS=${POPPLER_HAS_JS}
+COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS) $(COMPILER_DEFINES)
 LINKER_FLAGS		=	-shared
 LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
 
@@ -116,7 +118,7 @@ OBJECTS				=	$(SOURCES:%.cpp=%.o)
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = POPPLER_HAS_JS="$(POPPLER_HAS_JS)" $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) -DVERSION=\"${VERSION}\" $(TARGET_ARCH) -c
+COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 
 POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 

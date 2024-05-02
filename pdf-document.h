@@ -8,16 +8,6 @@
 #ifndef PDF_DOCUMENT_H_
 #define PDF_DOCUMENT_H_
 
-#ifdef POPPLER_HAS_JS
-#if POPPLER_HAS_JS == " "
-#define POPPLER_HAS_JS 0
-#else
-#define POPPLER_HAS_JS 1
-#endif
-#else
-#define POPPLER_HAS_JS 0
-#endif
-
 #include <phpcpp.h>
 #include <iostream>
 #include <cstring>
