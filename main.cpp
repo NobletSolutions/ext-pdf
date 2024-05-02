@@ -10,7 +10,7 @@
 #include "pdf-line.h"
 
 #ifndef VERSION
-#define VERSION "0.11.5"
+#define VERSION "0.11.21"
 #endif
 
 #ifndef POPPLER_HAS_JS
