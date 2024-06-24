@@ -29,7 +29,7 @@ VERSION	= 0.11.21
 #	one for each extension. Use this variable to specify this directory.
 #
 
-INI_DIR				=	$(shell php-config --ini-dir)
+INI_DIR	=	$(shell php-config --ini-dir)
 
 #
 #	The extension dirs
@@ -40,7 +40,7 @@ INI_DIR				=	$(shell php-config --ini-dir)
 #	this with a different fixed directory
 #
 
-EXTENSION_DIR		=	$(shell php-config --extension-dir)
+EXTENSION_DIR	=	$(shell php-config --extension-dir)
 
 
 #
@@ -50,8 +50,8 @@ EXTENSION_DIR		=	$(shell php-config --extension-dir)
 #	a certain extension to them (.so or .ini)
 #
 
-EXTENSION 			=	${NAME}.so
-INI 				=	${NAME}.ini
+EXTENSION 	=	${NAME}.so
+INI 		=	${NAME}.ini
 
 
 #
@@ -64,8 +64,8 @@ INI 				=	${NAME}.ini
 #	library file. By default, g++ (the GNU C++ compiler) is used for both.
 #
 
-COMPILER			=	g++
-LINKER				=	g++
+COMPILER	=	g++
+LINKER		=	g++
 
 
 #
@@ -87,9 +87,9 @@ POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-docum
 POPPLER_HAS_NEW_DATE_T := $(shell grep -qn info_date_t /usr/include/poppler/cpp/poppler-document.h && echo 1 || echo 0)
 
 COMPILER_DEFINES    = -DVERSION=\"${VERSION}\" -DPOPPLER_HAS_NEW_DATE_T=${POPPLER_HAS_NEW_DATE_T} -DPOPPLER_HAS_JS=${POPPLER_HAS_JS}
-COMPILER_FLAGS		=	-Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS) $(COMPILER_DEFINES)
-LINKER_FLAGS		=	-shared
-LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
+COMPILER_FLAGS		= -Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS) $(COMPILER_DEFINES)
+LINKER_FLAGS		= -shared
+LINKER_DEPENDENCIES	= $(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
 
 
 #
@@ -99,9 +99,9 @@ LINKER_DEPENDENCIES	=	$(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp f
 #	So you can probably leave this as it is
 #
 
-RM					=	rm -f
-CP					=	cp -f
-MKDIR				=	mkdir -p
+RM		=	rm -f
+CP		=	cp -f
+MKDIR	=	mkdir -p
 
 
 #
@@ -112,8 +112,8 @@ MKDIR				=	mkdir -p
 #	file, with the .cpp extension being replaced by .o.
 #
 
-SOURCES				=	$(wildcard *.cpp)
-OBJECTS				=	$(SOURCES:%.cpp=%.o)
+SOURCES	=	$(wildcard *.cpp)
+OBJECTS	=	$(SOURCES:%.cpp=%.o)
 
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
@@ -126,25 +126,25 @@ POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 #	From here the build instructions start
 #
 
-all:					${OBJECTS} ${EXTENSION}
+all:	${OBJECTS} ${EXTENSION}
 
-${EXTENSION}:			${OBJECTS}
-						${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}
+${EXTENSION}:	${OBJECTS}
+	${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}
 
 %.o: %.cpp $(DEPDIR)/%.d
-						$(COMPILE.cpp) $<
-						$(POSTCOMPILE)
+	$(COMPILE.cpp) $<
+	$(POSTCOMPILE)
 
 install:		
-						${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
-						${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
+	${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
+	${CP} ${INI} $(DESTDIR)/${INI_DIR}/60-${INI}
 
 uninstall:
-		rm $(DESTDIR)/${EXTENSION_DIR}/${EXTENSION}
-		rm $(DESTDIR)/${INI_DIR}/60-${INI}
+	rm $(DESTDIR)/${EXTENSION_DIR}/${EXTENSION}
+	rm $(DESTDIR)/${INI_DIR}/60-${INI}
 
 clean:
-						${RM} ${EXTENSION} ${OBJECTS}
+	${RM} ${EXTENSION} ${OBJECTS}
 
 dist: clean
 	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
@@ -154,4 +154,3 @@ $(DEPDIR)/%.d: ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS))))
-

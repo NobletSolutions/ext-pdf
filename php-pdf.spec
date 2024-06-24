@@ -10,7 +10,8 @@ Source0:    %{name}-%{version}.tar.bz2
 
 BuildRequires: php-devel >= 7.1 php-cpp-devel pdf-writer-devel poppler-cpp-devel fontconfig-devel openssl-devel
 BuildRequires: gcc gcc-c++ automake
-Requires:      php-cpp poppler-cpp pdf-writer = 4.0 fontconfig php-pdf-fonts openssl
+Requires:      php-cpp poppler-cpp pdf-writer = 4.0 openssl
+Requires:      fontconfig php-pdf-fonts mscorefonts
 Requires:      php(zend-abi) = %{php_zend_api}
 Requires:      php(api) = %{php_core_api}
 
