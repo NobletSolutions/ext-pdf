@@ -438,7 +438,7 @@ void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &me
         options = defaultText;
     }
 
-    writeTextToPdf((double)obj->getX(), (double)obj->getY(), obj->getText(), pageRotation, mediaBox, contentContext, options);
+    writeTextToPdf(obj->getAdjustedX(mediaBox.UpperRightX-mediaBox.LowerLeftX), obj->getAdjustedY(mediaBox.UpperRightY-mediaBox.LowerLeftY), obj->getText(), pageRotation, mediaBox, contentContext, options);
 }
 
 void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext) {

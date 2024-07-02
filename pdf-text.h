@@ -12,8 +12,8 @@
 
 class PdfText : public Php::Base {
 private:
-    int64_t x = 0;
-    int64_t y = 0;
+    double x = 0;
+    double y = 0;
     int64_t fontSize = 10;
     int64_t color = 0;
     std::string text;
@@ -22,6 +22,8 @@ public:
     PdfText();
     PdfText(const PdfText &obj);
     void __construct(Php::Parameters &params);
+    double getAdjustedX(int64_t pageWidth);
+    double getAdjustedY(int64_t pageHeight);
     Php::Value getX();
     Php::Value getY();
     Php::Value getText();
