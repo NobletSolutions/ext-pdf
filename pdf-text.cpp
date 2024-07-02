@@ -13,8 +13,8 @@
 PdfText::PdfText() = default;
 
 void PdfText::__construct(Php::Parameters &params) {
-    x = params[0].numericValue();
-    y = params[1].numericValue();
+    x = params[0].floatValue();
+    y = params[1].floatValue();
     text = params[2].stringValue();
 
     if (params.size() >= 4) {
@@ -41,12 +41,44 @@ PdfText::PdfText(const PdfText &obj) {
 	}
 }
 
+double PdfText::getAdjustedX(int64_t pageWidth) {
+    if (x > 1) {
+        return x;
+    }
+
+    if (x == 0) {
+        return 0;
+    }
+
+    if (x == 1) {
+        return pageWidth;
+    }
+
+    return pageWidth * x;
+}
+
+double PdfText::getAdjustedY(int64_t pageHeight) {
+    if (y > 1) {
+        return y;
+    }
+
+    if (y == 0) {
+        return 0;
+    }
+
+    if (y == 1) {
+        return pageHeight;
+    }
+
+    return pageHeight * y;
+}
+
 Php::Value PdfText::getX() {
-    return x;
+    return (int64_t)x;
 }
 
 Php::Value PdfText::getY() {
-    return y;
+    return (int64_t)y;
 }
 
 Php::Value PdfText::getText() {
