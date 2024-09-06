@@ -32,6 +32,7 @@
 
 #include "pdf-text.h"
 #include "pdf-image.h"
+#include "pdf-copy.h"
 
 inline bool file_exists(const std::string &filename ) {
     struct stat statBuffer;
@@ -738,3 +739,104 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
     return true;
 }
 
+/*
+params[1] is the destination PDF path
+params[0] is an array of PdfCopy commands
+*/
+Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
+    std::string destinationFile = params[0].stringValue();
+    EStatusCode status;
+    PDFWriter pdfWriter;
+    PDFParser* parser = NULL;
+
+    unsigned long pagesCount;
+    double width;
+    double height;
+
+    const double PAGE_WIDTH = 612;
+    const double PAGE_HEIGHT = 792;
+
+    status = pdfWriter.StartPDF(destinationFile, ePDFVersion17);
+    if (status != eSuccess) {
+        Php::warning << "Unable to open " << destinationFile << std::flush;
+        throw Php::Exception("Unable to open destination file");
+    }
+
+    PDFDocumentCopyingContext* copyingContext = NULL;
+
+    for (auto &iter : params[1]) {
+        PdfCopy *obj = (PdfCopy *) iter.second.implementation();
+        int mime = determineMimeType(obj->getFilePath());
+        if (UNSUPPORTED_TYPE == mime) {
+            return false;
+        }
+        
+        if (PDF_TYPE == mime) {
+            copyingContext = pdfWriter.CreatePDFCopyingContext(obj->getFilePath());
+            if (copyingContext)
+            {
+                parser = copyingContext->GetSourceDocumentParser();
+                pagesCount = parser->GetPagesCount();
+                for (int numCopies = 1; numCopies <= (int)obj->getCopies(); numCopies++) {
+                    if (obj->getPages().stringValue().empty()) {
+                        for (unsigned long i=0; i < pagesCount; ++i) 
+                        {
+                            // parse dimensions
+                            PDFPageInput pageInput(parser,parser->ParsePage(i));
+                            PDFRectangle mediaBox = pageInput.GetMediaBox();
+
+                            // create form
+                            EStatusCodeAndObjectIDType result = copyingContext->CreateFormXObjectFromPDFPage(i,ePDFPageBoxMediaBox);
+                            ObjectIDType reusableObjectID = result.second;
+
+                            // create target page
+                            PDFPage* page = new PDFPage();
+                            page->SetMediaBox(PDFRectangle(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
+
+                            PageContentContext* pageContent = pdfWriter.StartPageContentContext(page);
+
+                            pageContent->q();
+                            pageContent->cm(1, 0, 0, 1, 0, 0);
+                            pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
+                            pageContent->Q();
+
+                            pdfWriter.EndPageContentContext(pageContent);
+                            pdfWriter.WritePageAndRelease(page);
+                        }
+                    } else {
+                        int pagePos = 0;
+                        for(auto const i : obj->getTokenizedPages()) {
+                            // parse dimensions
+                            pagePos = i-1;
+                            PDFPageInput pageInput(parser, parser->ParsePage(pagePos));
+                            PDFRectangle mediaBox = pageInput.GetMediaBox();
+
+                            // create form
+                            EStatusCodeAndObjectIDType result = copyingContext->CreateFormXObjectFromPDFPage(pagePos,ePDFPageBoxMediaBox);
+                            ObjectIDType reusableObjectID = result.second;
+
+                            // create target page
+                            PDFPage* page = new PDFPage();
+                            page->SetMediaBox(mediaBox);//(0, 0, PAGE_WIDTH, PAGE_HEIGHT));
+
+                            PageContentContext* pageContent = pdfWriter.StartPageContentContext(page);
+                            pageContent->q();
+                            pageContent->cm(1, 0, 0, 1, 0, 0);
+                            pageContent->Do(page->GetResourcesDictionary().AddFormXObjectMapping(reusableObjectID));
+                            pageContent->Q();
+
+                            pdfWriter.EndPageContentContext(pageContent);
+                            pdfWriter.WritePageAndRelease(page);
+                        }
+                    }            
+                }
+                
+                delete parser;
+            }
+        }
+    }
+
+    pdfWriter.EndPDF();
+
+    return true;
+}
