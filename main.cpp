@@ -5,6 +5,7 @@
 #include "pdf-image-format.h"
 #include "pdf-writer.h"
 #include "pdf-text.h"
+#include "pdf-copy.h"
 #include "pdf-image.h"
 #include "pdf-rectangle.h"
 #include "pdf-line.h"
@@ -56,6 +57,20 @@ extern "C" {
         pdfImage.method<&PdfImage::getImagePath>("getImagePath", Php::Public);
         pdfImage.method<&PdfImage::getWidth>("getWidth", Php::Public);
         pdfImage.method<&PdfImage::getHeight>("getHeight", Php::Public);
+
+
+        // PdfCopy Methods =========================
+        Php::Class<PdfCopy> pdfCopy("PdfCopy");
+        pdfCopy.method<&PdfCopy::__construct>("__construct", Php::Public, {
+            Php::ByVal("filePath", Php::Type::String),
+            Php::ByVal("copies", Php::Type::Numeric, false),
+            Php::ByVal("pages", Php::Type::String, false)
+        });
+
+        pdfCopy.method<&PdfCopy::getCopies>("getCopies", Php::Public);
+        pdfCopy.method<&PdfCopy::getPages>("getPages", Php::Public);
+        pdfCopy.method<&PdfCopy::getFilePath>("getFilePath", Php::Public);
+        // pdfCopy.method<&PdfCopy::getTokenizedPages>("getTokenizedPages", Php::Public);
 
         // PdfText Methods =========================
         Php::Class<PdfText> pdfText("PdfText");
@@ -163,6 +178,11 @@ extern "C" {
             Php::ByVal("destination", Php::Type::String),
         });
  
+        pdfWriter.method<&PdfWriter::complexCombine>("complexCombine", Php::Public, {
+            Php::ByVal("documents", Php::Type::Array),
+            Php::ByVal("destination", Php::Type::String),
+        });
+
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");
         PdfImageResult.method<&PdfImageResult::__construct>("__construct", Php::Public);
         PdfImageResult.method<&PdfImageResult::getImageWidth>("getImageWidth", Php::Public);
@@ -220,6 +240,7 @@ extern "C" {
         myNamespace.add(std::move(PdfImageResult));
         myNamespace.add(std::move(pdfDocument));
         myNamespace.add(std::move(pdfText));
+        myNamespace.add(std::move(pdfCopy));
         myNamespace.add(std::move(pdfRectangle));
         myNamespace.add(std::move(pdfLine));
         myNamespace.add(std::move(pdfImage));
