@@ -1,5 +1,5 @@
 Name:       php-pdf
-Version:    0.11.25
+Version:    0.12.0~rc1
 Release:    1%{?dist}
 Summary:    PHP PDF Poppler/ PDFWriter Extension
 
@@ -35,4 +35,3 @@ mkdir -p %{buildroot}/etc/php.d
 %{_sysconfdir}/php.d/60-pdf.ini
 
 %changelog
-
