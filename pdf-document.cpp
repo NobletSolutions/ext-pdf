@@ -68,7 +68,7 @@ void PdfDocument::__construct(Php::Parameters &params) {
     filePath = std::string(real_path);
     free(real_path);
 
-    Php::out << "ParamPath: " << params[0].stringValue() << "RealPath: " << filePath << std::endl;
+    // Php::out << "ParamPath: " << params[0].stringValue() << "RealPath: " << filePath << std::endl;
 
     _document = poppler::document::load_from_file(filePath);
 
