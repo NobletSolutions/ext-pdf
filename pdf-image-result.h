@@ -34,6 +34,7 @@ public:
     Php::Value getPageWidth();
     Php::Value getPageHeight();
     Php::Value getPage();
+    Php::Value getRelativePage(Php::Parameters &params);
 };
 
 #endif /* PDF_POPPLER_H_ */

@@ -42,3 +42,12 @@ Php::Value PdfImageResult::getPage() {
     return page;
 }
 
+Php::Value PdfImageResult::getRelativePage(Php::Parameters &params) {
+    std::string rootPath = params[0].stringValue();
+    size_t pagePos = page.find(rootPath);
+    if (pagePos == std::string::npos) {
+        throw Php::Exception(rootPath + " not found within page: " + page);
+    }
+
+    return page.substr(+rootPath.length());
+}

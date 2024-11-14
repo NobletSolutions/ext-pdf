@@ -170,6 +170,9 @@ extern "C" {
         PdfImageResult.method<&PdfImageResult::getPageWidth>("getPageWidth", Php::Public);
         PdfImageResult.method<&PdfImageResult::getPageHeight>("getPageHeight", Php::Public);
         PdfImageResult.method<&PdfImageResult::getPage>("getPage", Php::Public);
+        PdfImageResult.method<&PdfImageResult::getRelativePage>("getRelativePage", Php::Public, {
+            Php::ByVal("rootPath", Php::Type::String)
+        });
 
         Php::Class<PdfDocument> pdfDocument("PdfDocument");
         pdfDocument.constant("IMAGE_JPEG", 1);

@@ -64,11 +64,17 @@ void PdfDocument::__construct(Php::Parameters &params) {
         throw Php::Exception("File doesn't exist?");
     }
 
-    filePath = params[0].stringValue();
-    _document = poppler::document::load_from_file(params[0]);
+    char *real_path = realpath(params[0].stringValue().c_str(), NULL);
+    filePath = std::string(real_path);
+    free(real_path);
+
+    Php::out << "ParamPath: " << params[0].stringValue() << "RealPath: " << filePath << std::endl;
+
+    _document = poppler::document::load_from_file(filePath);
+
     if(_document == NULL) {
-	Php::warning << "Unable to open file as PDF" << std::flush;
-	throw Php::Exception("File is not a PDF");
+	    Php::warning << "Unable to open file as PDF" << std::flush;
+	    throw Php::Exception("File is not a PDF");
     }
 }
 
@@ -198,7 +204,6 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     int x;
     Php::Value returnValue;
 
-    char pattern[300];
     PdfImageFormat * format = NULL;
     poppler::page *page;
     poppler::page_renderer *renderer;
@@ -219,15 +224,25 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         resolution = params[2];
     }
 
-    renderer = new poppler::page_renderer();
+    renderer                  = new poppler::page_renderer();
+    std::string outputPattern = params[1].stringValue();
+    size_t found              = outputPattern.find_last_of("/");
 
-    params[1].stringValue().copy(pattern,params[1].size(),0);
+    if (found == std::string::npos) {
+        throw Php::Exception("Unable to locate output directory");
+    }
 
-    char * _dirname = dirname(pattern);
-    // Php::out << "Attempting to create dir: " << _dirname << std::endl;
+    char * outputDirectory = realpath(outputPattern.substr(0, found).c_str(), NULL);
+
+    if (outputDirectory == NULL) {
+        throw Php::Exception("Unable to file output directory pattern: "+ outputPattern.substr(0, found) );
+    }
+
+    std::string outputFile = outputPattern.substr(found+1);
+
     // Check that the directory exists
-    if (!file_exists(_dirname) && _mkdir(_dirname) != 0) {
-        Php::warning << "PHP-PDF: Unable to create dir " << _dirname << " because '" << strerror(errno) << "'" << std::flush;
+    if (!file_exists(outputDirectory) && _mkdir(outputDirectory) != 0) {
+        Php::warning << "PHP-PDF: Unable to create dir " << outputDirectory << " because '" << strerror(errno) << "'" << std::flush;
         throw Php::Exception("Unable to create directory");
     }
 
@@ -239,7 +254,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         char outFile[255];
 
         memset(&outFile, 0, 255);
-        sprintf(&outFile[0], "%s-%d.%s", params[1].stringValue().c_str(), x, format->getExtension());
+        sprintf(&outFile[0], "%s/%s-%d.%s", outputDirectory, outputFile.c_str(), x, format->getExtension());
 
         page = _document->create_page(x);
 
@@ -262,6 +277,8 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
 
         returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(pageWidth, pageHeight, imageWidth, imageHeight, outFile));
     }
+
+    free(outputDirectory);
 
     return returnValue;
 }
