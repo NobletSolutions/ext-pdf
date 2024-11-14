@@ -42,3 +42,8 @@ Php::Value PdfImageResult::getPage() {
     return page;
 }
 
+Php::Value PdfImageResult::getRelativePage(Php::Parameters &params) {
+    std::string rootPath = params[0].stringValue();
+    
+    return page.substr(page.find(rootPath)+rootPath.length());
+}
