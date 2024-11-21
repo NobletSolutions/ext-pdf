@@ -243,6 +243,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
     // Check that the directory exists
     if (!file_exists(outputDirectory) && _mkdir(outputDirectory) != 0) {
         Php::warning << "PHP-PDF: Unable to create dir " << outputDirectory << " because '" << strerror(errno) << "'" << std::flush;
+        free(outputDirectory);
         throw Php::Exception("Unable to create directory");
     }
 
