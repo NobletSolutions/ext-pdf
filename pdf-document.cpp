@@ -64,12 +64,7 @@ void PdfDocument::__construct(Php::Parameters &params) {
         throw Php::Exception("File doesn't exist?");
     }
 
-    char *real_path = realpath(params[0].stringValue().c_str(), NULL);
-    filePath = std::string(real_path);
-    free(real_path);
-
-    // Php::out << "ParamPath: " << params[0].stringValue() << "RealPath: " << filePath << std::endl;
-
+    filePath = params[0].stringValue();
     _document = poppler::document::load_from_file(filePath);
 
     if(_document == NULL) {
@@ -232,18 +227,13 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         throw Php::Exception("Unable to locate output directory");
     }
 
-    char * outputDirectory = realpath(outputPattern.substr(0, found).c_str(), NULL);
-
-    if (outputDirectory == NULL) {
-        throw Php::Exception("Unable to file output directory pattern: "+ outputPattern.substr(0, found) );
-    }
-
+    std::string outputDirectory = outputPattern.substr(0, found);
     std::string outputFile = outputPattern.substr(found+1);
+    // Php::out << "OutputDirectory: " << outputDirectory.c_str() << std::endl;
 
-    // Check that the directory exists
-    if (!file_exists(outputDirectory) && _mkdir(outputDirectory) != 0) {
-        Php::warning << "PHP-PDF: Unable to create dir " << outputDirectory << " because '" << strerror(errno) << "'" << std::flush;
-        free(outputDirectory);
+    // Check/Create the requested output directory
+    if (!file_exists(outputDirectory.c_str()) && _mkdir(outputDirectory.c_str()) != 0) {
+        Php::warning << "PHP-PDF: Unable to create dir " << outputDirectory.c_str() << " because '" << strerror(errno) << "'" << std::flush;
         throw Php::Exception("Unable to create directory");
     }
 
@@ -260,7 +250,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         pageHeight = 0;
 
         memset(outFile, 0, PATH_MAX);
-        sprintf(outFile, "%s/%s-%d.%s", outputDirectory, outputFile.c_str(), x, format->getExtension());
+        sprintf(outFile, "%s/%s-%d.%s", outputDirectory.c_str(), outputFile.c_str(), x, format->getExtension());
 
         page = _document->create_page(x);
 
@@ -283,8 +273,6 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
 
         returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(pageWidth, pageHeight, imageWidth, imageHeight, outFile));
     }
-
-    free(outputDirectory);
 
     return returnValue;
 }

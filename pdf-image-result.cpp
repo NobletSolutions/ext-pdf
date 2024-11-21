@@ -43,13 +43,7 @@ Php::Value PdfImageResult::getPage() {
 }
 
 Php::Value PdfImageResult::getRelativePage(Php::Parameters &params) {
-    char * absolutePath = realpath(params[0].stringValue().c_str(), NULL);
-    if (!absolutePath) {
-        throw Php::Exception(params[0].stringValue() + " not resolvable");
-    }
-
-    std::string rootPath(absolutePath);
-    free(absolutePath);
+    std::string rootPath = params[0].stringValue();
     size_t pagePos = page.find(rootPath);
     if (pagePos == std::string::npos) {
         throw Php::Exception(rootPath + " not found within page: " + page);
