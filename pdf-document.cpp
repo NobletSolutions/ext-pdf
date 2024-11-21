@@ -215,8 +215,8 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         return false;
     }
 
-    if (params[1].size() + 10 > 255) {
-        //Php::warning << "Path is larger than 255 chars - Unable to proceed" << std::flush;
+    if (params[1].size() + 10 > PATH_MAX) {
+        //Php::warning << "Path is larger than " << PATH_MAX << " chars - Unable to proceed" << std::flush;
         return false;
     }
 
@@ -246,15 +246,20 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         throw Php::Exception("Unable to create directory");
     }
 
-    for (x = firstPage; x < lastPage; x++) {
-        int imageWidth = 0;
-        int imageHeight = 0;
-        int pageWidth = 0;
-        int pageHeight = 0;
-        char outFile[255];
+    int imageWidth = 0;
+    int imageHeight = 0;
+    int pageWidth = 0;
+    int pageHeight = 0;
+    char *outFile = (char*)malloc(PATH_MAX);
 
-        memset(&outFile, 0, 255);
-        sprintf(&outFile[0], "%s/%s-%d.%s", outputDirectory, outputFile.c_str(), x, format->getExtension());
+    for (x = firstPage; x < lastPage; x++) {
+        imageWidth = 0;
+        imageHeight = 0;
+        pageWidth = 0;
+        pageHeight = 0;
+
+        memset(outFile, 0, PATH_MAX);
+        sprintf(outFile, "%s/%s-%d.%s", outputDirectory, outputFile.c_str(), x, format->getExtension());
 
         page = _document->create_page(x);
 
