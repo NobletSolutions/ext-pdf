@@ -14,6 +14,11 @@
 #include <PDFWriter/PDFDocumentCopyingContext.h>
 #include <PDFWriter/PageContentContext.h>
 #include <PDFWriter/PDFPageInput.h>
+#include <PDFWriter/PDFWriter.h>
+#include <PDFWriter/PDFIndirectObjectReference.h>
+#include <PDFWriter/DictionaryContext.h>
+#include <PDFWriter/PDFArray.h>
+
 #include <phpcpp.h>
 #include <sys/stat.h>
 #include <math.h>
@@ -133,10 +138,9 @@ void PdfWriter::__construct(Php::Parameters &params) {
 
     _inputFileName.assign(params[0].stringValue());
     _outputFileName.assign(params[1].stringValue());
-    EStatusCode status = writer.ModifyPDF(_inputFileName, ePDFVersion14, _outputFileName);
-    if (status != eSuccess) {
-        Php::warning << "Unable to open " << _inputFileName << std::flush;
-        throw Php::Exception("Unable to open file");
+
+    if (params.size() == 3) {
+        flatten = params[2].boolValue();
     }
 
     initializeFonts();
@@ -481,7 +485,143 @@ void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext)
     contentContext->DrawPath(pathPoints, options);
 }
 
+void modifyDictionary(PDFDictionary *source, DictionaryContext *newDictionary, PDFDocumentCopyingContext *copyingContext, std::string excludedKey) {
+    MapIterator<PDFNameToPDFObjectMap> iterator = source->GetIterator();
+    while (iterator.MoveNext()) {
+        if (iterator.GetKey()->GetValue() != excludedKey)
+        {
+            newDictionary->WriteKey(iterator.GetKey()->GetValue());
+            copyingContext->CopyDirectObjectAsIs(iterator.GetValue());
+        }
+    }
+}
+
+bool removeForm(const char * inputFile, const char * outputFile) {
+    char tempFileName[] = "/tmp/pdf-post-flattened-XXXXXX";
+    int fd;
+
+    if ((fd = mkstemp(tempFileName)) == -1) {
+        fprintf(stderr, "Failed with error %s\n", strerror(errno));
+        return false;
+    }
+
+    PDFWriter writer;
+    EStatusCode status = writer.ModifyPDF(inputFile, ePDFVersionUndefined, tempFileName);
+    if(status != EStatusCode::eSuccess){
+        std::cerr << "Unable to open " << inputFile << std::endl;
+        return false;
+    }
+
+    PDFParser &parser = writer.GetModifiedFileParser();
+    PDFDocumentCopyingContext* copyingContext = writer.CreatePDFCopyingContextForModifiedFile();
+    ObjectsContext& objectContext = writer.GetObjectsContext();
+
+    unsigned long pageCount = parser.GetPagesCount();
+
+    // This loops over each page, extracts the "Annots" data which is where all the visual widgets exist for a form
+    // We modify the page and only copy non "Widget" annot types
+    for(unsigned long i = 0; i < pageCount; i++ ) {
+        PDFDictionary *pageDictionary = parser.ParsePage(i);
+        if(pageDictionary->Exists("Annots")) {
+            objectContext.StartModifiedIndirectObject(parser.GetPageObjectID(i));
+
+            DictionaryContext *newDict = objectContext.StartDictionary();
+            // creates a copy of the original dictionary excluding "Annots"
+            modifyDictionary(pageDictionary, newDict, copyingContext, "Annots");
+
+            newDict->WriteKey("Annots");
+            objectContext.StartArray();
+            PDFObjectCastPtr<PDFArray> anArray = parser.QueryDictionaryObject(pageDictionary, "Annots");
+            if (!!anArray) {
+                unsigned long annotArrayCount = anArray->GetLength();
+                for(unsigned long i = 0; i < annotArrayCount; i++) {
+                    PDFObjectCastPtr<PDFDictionary> annotationObject(parser.QueryArrayObject(anArray.GetPtr(),i));
+                    PDFObjectCastPtr<PDFName> objectType = annotationObject->QueryDirectObject("Subtype");
+
+                    if(!objectType) {
+                        continue;
+                    }
+
+                    if (objectType->GetValue() != "Widget") {
+                        copyingContext->CopyDirectObjectAsIs(annotationObject.GetPtr());
+                    }
+                }
+            }
+
+            objectContext.EndArray();
+            objectContext.EndLine();
+
+            objectContext.EndDictionary(newDict);
+            objectContext.EndIndirectObject();
+        }
+    }
+
+    // Now remove references to the AcroForm object which is where the actual form "fields" are defined
+    PDFObjectCastPtr<PDFDictionary> catalogDict(parser.QueryDictionaryObject(parser.GetTrailer(),"Root"));
+    PDFObjectCastPtr<PDFIndirectObjectReference> catalogDictObjId(parser.GetTrailer()->QueryDirectObject("Root"));
+    objectContext.StartModifiedIndirectObject(catalogDictObjId->mObjectID);
+
+    DictionaryContext *newDict = objectContext.StartDictionary();
+    modifyDictionary(catalogDict.GetPtr(), newDict, copyingContext, "AcroForm");
+
+    objectContext.EndDictionary(newDict);
+    objectContext.EndIndirectObject();
+    if (catalogDict->Exists("AcroForm")) {
+        PDFObjectCastPtr<PDFIndirectObjectReference> formId = catalogDict->QueryDirectObject("AcroForm");
+        if(formId->GetType() == PDFObject::ePDFObjectIndirectObjectReference) {
+            objectContext.GetInDirectObjectsRegistry().DeleteObject(formId->mObjectID);
+        }
+    }
+
+    // Write everything out
+    writer.EndPDF();
+
+    // Because everything above is just "re-written", the PDF created at the end of the line above is actually bigger.
+    // Nothing done there other than copying a bunch of indexes excluding the parts we want.
+    // This reads the PDF and copies everything, but only the resulting data, thus making it smaller and only copying
+    // none deleted pdf instructions/commands
+	PDFWriter::RecryptPDF(
+		tempFileName,
+		"",
+		outputFile,
+        LogConfiguration::DefaultLogConfiguration(),
+        PDFCreationSettings(true, true),
+		ePDFVersionUndefined
+    );
+
+    unlink(tempFileName);
+}
+
 void PdfWriter::writePdf(Php::Parameters &params) {
+    EStatusCode status;
+
+    //We flatten first because for whatever reason if we flatten afterwards the form is gone but so is our content.
+    if (flatten) {
+        char tempFileName[] = "/tmp/pdf-pre-flattened-XXXXXX";
+        int fd;
+
+        if ((fd = mkstemp(tempFileName)) == -1) {
+            fprintf(stderr, "Failed with error %s\n", strerror(errno));
+            return;
+        }
+
+        std::ifstream  src(_inputFileName.c_str(), std::ios::binary);
+        std::ofstream  dst(tempFileName, std::ios::binary);
+
+        // Copy the source to the destination
+        dst << src.rdbuf();
+        removeForm(_inputFileName.c_str(), tempFileName);
+        status = writer.ModifyPDF(tempFileName, ePDFVersionUndefined, _outputFileName);
+        unlink(tempFileName);
+    } else {
+        status = writer.ModifyPDF(_inputFileName, ePDFVersionUndefined, _outputFileName);
+    }
+
+    if (status != eSuccess) {
+        Php::warning << "Unable to open " << _inputFileName << std::flush;
+        throw Php::Exception("Unable to open file");
+    }
+
     int pagePos = 0;
     while (true) {
         PDFModifiedPage thePage(&writer, pagePos, true);
@@ -491,7 +631,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             break;
         }
 
-        PDFObject* page = writer.GetModifiedFileParser().ParsePage(pagePos);
+        RefCountPtr<PDFDictionary> page = writer.GetModifiedFileParser().ParsePage(pagePos);
         PDFPageInput pageInput(&writer.GetModifiedFileParser(), page);
         PDFRectangle mediaBox = pageInput.GetMediaBox();
         int pageRotation      = pageInput.GetRotate();
@@ -547,7 +687,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
 
     // requesting only particular pages
     if (!params.empty()) {
-        char tempFileName[] = "/tmp/fileXXXXXX";
+        char tempFileName[] = "/tmp/pdf-pages-XXXXXX";
         int fd;
 
         if ((fd = mkstemp(tempFileName)) == -1) {
@@ -555,6 +695,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
             return;
         }
 
+        // https://stackoverflow.com/questions/32445579/when-a-file-created-with-mkstemp-is-deleted
         unlink(tempFileName);
 
         FILE *fh = fdopen(fd, "w");
@@ -562,6 +703,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         std::ifstream  src(_outputFileName.c_str(), std::ios::binary);
         std::ofstream  dst(tempFileName, std::ios::binary);
 
+        // Copy the source to the destination
         dst << src.rdbuf();
 
         PDFPageRange pageRange;
@@ -595,6 +737,7 @@ void PdfWriter::writePdf(Php::Parameters &params) {
         fclose(fh);
     }
 }
+
 
 Php::Value PdfWriter::getAllFonts() {
     return getFonts();

@@ -141,7 +141,8 @@ extern "C" {
         Php::Class<PdfWriter> pdfWriter("PdfWriter");
         pdfWriter.method<&PdfWriter::__construct>("__construct", Php::Public, {
             Php::ByVal("inputFile", Php::Type::String),
-            Php::ByVal("outputFile", Php::Type::String)
+            Php::ByVal("outputFile", Php::Type::String),
+            Php::ByVal("flatten", Php::Type::Bool, false)
         });
 
         pdfWriter.method<&PdfWriter::getAllFonts>("getAllFonts", Php::Public);
