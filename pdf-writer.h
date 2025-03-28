@@ -38,6 +38,7 @@ private:
     AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10, int64_t color = 0);
     std::string _inputFileName;
     std::string _outputFileName;
+    bool flatten = false;
     std::unordered_map<double,std::vector<PdfImage*>> pageImages;
     std::unordered_map<double,std::vector<PdfText*>> pageText;
     std::unordered_map<double,std::vector<PdfRectangle*>> pageRectangles;
