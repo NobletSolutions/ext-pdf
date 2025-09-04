@@ -903,8 +903,8 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
     PDFParser* parser = NULL;
 
     unsigned long pagesCount;
-    double width;
-    double height;
+    // double width;
+    // double height;
 
     const double PAGE_WIDTH = 612;
     const double PAGE_HEIGHT = 792;
