@@ -486,12 +486,13 @@ void PdfWriter::writeLine(PdfLine *line, AbstractContentContext *contentContext)
 }
 
 void modifyDictionary(PDFDictionary *source, DictionaryContext *newDictionary, PDFDocumentCopyingContext *copyingContext, std::string excludedKey) {
+    EStatusCode status = eSuccess;
     MapIterator<PDFNameToPDFObjectMap> iterator = source->GetIterator();
-    while (iterator.MoveNext()) {
+    while (iterator.MoveNext() && (eSuccess == status)) {
         if (iterator.GetKey()->GetValue() != excludedKey)
         {
             newDictionary->WriteKey(iterator.GetKey()->GetValue());
-            copyingContext->CopyDirectObjectAsIs(iterator.GetValue());
+            status = copyingContext->CopyDirectObjectAsIs(iterator.GetValue());
         }
     }
 }
@@ -522,7 +523,7 @@ bool removeForm(const char * inputFile, const char * outputFile) {
     // We modify the page and only copy non "Widget" annot types
     for(unsigned long i = 0; i < pageCount; i++ ) {
         PDFDictionary *pageDictionary = parser.ParsePage(i);
-        if(pageDictionary->Exists("Annots")) {
+        if (pageDictionary->Exists("Annots")) {
             objectContext.StartModifiedIndirectObject(parser.GetPageObjectID(i));
 
             DictionaryContext *newDict = objectContext.StartDictionary();
@@ -531,19 +532,27 @@ bool removeForm(const char * inputFile, const char * outputFile) {
 
             newDict->WriteKey("Annots");
             objectContext.StartArray();
-            PDFObjectCastPtr<PDFArray> anArray = parser.QueryDictionaryObject(pageDictionary, "Annots");
+            PDFObjectCastPtr<PDFArray> anArray(parser.QueryDictionaryObject(pageDictionary, "Annots"));
             if (!!anArray) {
                 unsigned long annotArrayCount = anArray->GetLength();
-                for(unsigned long i = 0; i < annotArrayCount; i++) {
+                for (unsigned long i = 0; i < annotArrayCount; i++) {
                     PDFObjectCastPtr<PDFDictionary> annotationObject(parser.QueryArrayObject(anArray.GetPtr(),i));
                     PDFObjectCastPtr<PDFName> objectType = annotationObject->QueryDirectObject("Subtype");
 
-                    if(!objectType) {
+                    if (!objectType) {
                         continue;
                     }
 
                     if (objectType->GetValue() != "Widget") {
                         copyingContext->CopyDirectObjectAsIs(annotationObject.GetPtr());
+                    } else {
+                        RefCountPtr<PDFObject> directItem(anArray->QueryObject(i));
+
+                        // let's also delete this object if it's a widget
+                        if (directItem->GetType() == PDFObject::ePDFObjectIndirectObjectReference) {
+                            // lets also mark the original object for deletion
+                            status = objectContext.GetInDirectObjectsRegistry().DeleteObject(((PDFIndirectObjectReference*)(directItem.GetPtr()))->mObjectID);
+                        }
                     }
                 }
             }
@@ -590,6 +599,7 @@ bool removeForm(const char * inputFile, const char * outputFile) {
     );
 
     unlink(tempFileName);
+    return true;
 }
 
 void PdfWriter::writePdf(Php::Parameters &params) {
