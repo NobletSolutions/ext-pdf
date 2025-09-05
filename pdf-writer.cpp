@@ -530,34 +530,34 @@ bool removeForm(const char * inputFile, const char * outputFile) {
             // creates a copy of the original dictionary excluding "Annots"
             modifyDictionary(pageDictionary, newDict, copyingContext, "Annots");
 
-            newDict->WriteKey("Annots");
-            objectContext.StartArray();
-            PDFObjectCastPtr<PDFArray> anArray(parser.QueryDictionaryObject(pageDictionary, "Annots"));
-            if (!!anArray) {
-                unsigned long annotArrayCount = anArray->GetLength();
-                for (unsigned long i = 0; i < annotArrayCount; i++) {
-                    PDFObjectCastPtr<PDFDictionary> annotationObject(parser.QueryArrayObject(anArray.GetPtr(),i));
-                    PDFObjectCastPtr<PDFName> objectType = annotationObject->QueryDirectObject("Subtype");
+            // newDict->WriteKey("Annots");
+            // objectContext.StartArray();
+            // PDFObjectCastPtr<PDFArray> anArray(parser.QueryDictionaryObject(pageDictionary, "Annots"));
+            // if (!!anArray) {
+            //     unsigned long annotArrayCount = anArray->GetLength();
+            //     for (unsigned long i = 0; i < annotArrayCount; i++) {
+            //         PDFObjectCastPtr<PDFDictionary> annotationObject(parser.QueryArrayObject(anArray.GetPtr(),i));
+            //         PDFObjectCastPtr<PDFName> objectType = annotationObject->QueryDirectObject("Subtype");
 
-                    if (!objectType) {
-                        continue;
-                    }
+            //         if (!objectType) {
+            //             continue;
+            //         }
 
-                    if (objectType->GetValue() != "Widget") {
-                        copyingContext->CopyDirectObjectAsIs(annotationObject.GetPtr());
-                    } else {
-                        RefCountPtr<PDFObject> directItem(anArray->QueryObject(i));
+            //         if (objectType->GetValue() != "Widget") {
+            //             copyingContext->CopyDirectObjectAsIs(annotationObject.GetPtr());
+            //         } else {
+            //             RefCountPtr<PDFObject> directItem(anArray->QueryObject(i));
 
-                        // let's also delete this object if it's a widget
-                        if (directItem->GetType() == PDFObject::ePDFObjectIndirectObjectReference) {
-                            // lets also mark the original object for deletion
-                            status = objectContext.GetInDirectObjectsRegistry().DeleteObject(((PDFIndirectObjectReference*)(directItem.GetPtr()))->mObjectID);
-                        }
-                    }
-                }
-            }
+            //             // let's also delete this object if it's a widget
+            //             if (directItem->GetType() == PDFObject::ePDFObjectIndirectObjectReference) {
+            //                 // lets also mark the original object for deletion
+            //                 status = objectContext.GetInDirectObjectsRegistry().DeleteObject(((PDFIndirectObjectReference*)(directItem.GetPtr()))->mObjectID);
+            //             }
+            //         }
+            //     }
+            // }
 
-            objectContext.EndArray();
+            // objectContext.EndArray();
             objectContext.EndLine();
 
             objectContext.EndDictionary(newDict);
