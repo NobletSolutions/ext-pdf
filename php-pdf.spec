@@ -1,5 +1,7 @@
+%global source_date_epoch_from_changelog 0
+
 Name:       php-pdf
-Version:    0.12.0~rc10
+Version:    0.12.0
 Release:    1%{?dist}
 Summary:    PHP PDF Poppler/ PDFWriter Extension
 
