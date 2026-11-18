@@ -271,7 +271,7 @@ Php::Value PdfDocument::toImage(Php::Parameters &params) {
         imageWidth = image.width();
         imageHeight = image.height();
 
-        returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(pageWidth, pageHeight, imageWidth, imageHeight, outFile));
+        returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(imageWidth, imageHeight, pageWidth, pageHeight, outFile));
     }
 
     return returnValue;
