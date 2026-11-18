@@ -7,6 +7,9 @@
 
 #include <phpcpp.h>
 #include <string.h>
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 #include <iostream>
 #include "pdf-copy.h"
 #include <sys/stat.h>
@@ -62,65 +65,50 @@ Php::Value PdfCopy::getPages() {
     return pages;
 }
 
-std::vector<int> split(std::string &str, char c = ',')
-{
-    // std::cout << "Spliting: '" << str << "'" << std::endl;
-    std::vector<int> result;
-    std::size_t pos;
-    std::size_t start = 0;
-    std::string sub;
-    int converted = 0;
-    while((pos = str.find(c, start)) != std::string::npos){
-        sub = str.substr(start, pos-start); 
-        // std::cout << sub  << "= str.substr("<<start<<", "<<pos<<"-"<<start<<")"<<std::endl;
-        start = pos+1;
-        
-        if (sub.find('-') != std::string::npos) {
-            if(sub.size() <= 2) {
-                Php::warning << "Invalid page range: " << sub << " found" << std::flush;
-                throw Php::Exception("Invalid page range: " + sub + " found");
-            }
-            auto const range = split(sub, '-');
-            if (range.size() != 2) {
-                Php::warning << sub << " contains too many ranges" << std::flush;
-                throw Php::Exception("Range " + sub + " contains too many ranges");
-            }
-
-            for (int start = range[0]; start <= range[1]; start++) {
-                result.push_back(start);
-            }
-        } else {
-            converted = atoi(sub.c_str());
-            if (converted <= 0) {
-                Php::warning << "Unable to convert '" << sub << "' to a page number" << std::flush;
-                throw Php::Exception("Unable to convert '" + sub + "' to a page number");
-            }
-
-            result.push_back(converted);   
-        }
+static int parsePageNumber(const std::string& token, unsigned long pageCount) {
+    const char* digits = token.c_str();
+    char* end;
+    errno = 0;
+    const long page = std::strtol(digits, &end, 10);
+    if (errno == ERANGE || page <= 0 || page > INT_MAX || end != digits + token.size()) {
+        Php::warning << "Unable to convert '" << token << "' to a page number" << std::flush;
+        throw Php::Exception("Unable to convert '" + token + "' to a page number");
+    }
+    if (static_cast<unsigned long>(page) > pageCount) {
+        throw Php::Exception("Selected page is outside the PDF");
     }
 
-    sub = str.substr(start);
-    converted = atoi(sub.c_str());
-    if (converted <= 0) {
-        Php::warning << "Unable to convert '" << sub << "' to a page number" << std::flush;
-        throw Php::Exception("Unable to convert '" + sub + "' to a page number");
-    }
-
-    result.push_back(converted);
-
-    return result;
+    return static_cast<int>(page);
 }
 
-std::vector<int> PdfCopy::getTokenizedPages() {
-    std::vector<int> _pages;
+std::vector<int> PdfCopy::getTokenizedPages(unsigned long pageCount) {
     if (pages.empty()) {
-        return _pages;
+        return {};
     }
-    std::regex whitespace(" ");
-    std::string cleanedPages = std::regex_replace(pages, whitespace, "");
-    
-    return split(cleanedPages, ',');
+
+    const std::string cleanedPages = std::regex_replace(pages, std::regex(" "), "");
+    std::vector<int> result;
+    size_t start = 0;
+    while (true) {
+        const size_t comma = cleanedPages.find(',', start);
+        const std::string token = cleanedPages.substr(start, comma - start);
+        const size_t dash = token.find('-');
+        const int first = parsePageNumber(token.substr(0, dash), pageCount);
+        const int last = dash == std::string::npos ? first : parsePageNumber(token.substr(dash + 1), pageCount);
+        if (first > last) {
+            throw Php::Exception("Invalid page range: " + token);
+        }
+
+        for (int page = first; page < last; ++page) {
+            result.push_back(page);
+        }
+        result.push_back(last);
+
+        if (comma == std::string::npos) {
+            return result;
+        }
+        start = comma + 1;
+    }
 }
 
 Php::Value PdfCopy::getFilePath() {

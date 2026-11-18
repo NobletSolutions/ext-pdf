@@ -935,9 +935,6 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
     std::string destinationFile = params[0].stringValue();
     EStatusCode status;
     PDFWriter pdfWriter;
-    PDFParser* parser = NULL;
-
-    unsigned long pagesCount;
     // double width;
     // double height;
 
@@ -950,8 +947,6 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
         throw Php::Exception("Unable to open destination file");
     }
 
-    PDFDocumentCopyingContext* copyingContext = NULL;
-
     for (auto &iter : params[1]) {
         PdfCopy *obj = (PdfCopy *) iter.second.implementation();
         int mime = determineMimeType(obj->getFilePath());
@@ -960,11 +955,11 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
         }
         
         if (PDF_TYPE == mime) {
-            copyingContext = pdfWriter.CreatePDFCopyingContext(obj->getFilePath());
+            std::unique_ptr<PDFDocumentCopyingContext> copyingContext(pdfWriter.CreatePDFCopyingContext(obj->getFilePath()));
             if (copyingContext)
             {
-                parser = copyingContext->GetSourceDocumentParser();
-                pagesCount = parser->GetPagesCount();
+                PDFParser* parser = copyingContext->GetSourceDocumentParser();
+                const unsigned long pagesCount = parser->GetPagesCount();
                 for (int numCopies = 1; numCopies <= (int)obj->getCopies(); numCopies++) {
                     if (obj->getPages().stringValue().empty()) {
                         for (unsigned long i=0; i < pagesCount; ++i) 
@@ -993,7 +988,7 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
                         }
                     } else {
                         int pagePos = 0;
-                        for(auto const i : obj->getTokenizedPages()) {
+                        for(auto const i : obj->getTokenizedPages(pagesCount)) {
                             // parse dimensions
                             pagePos = i-1;
                             PDFPageInput pageInput(parser, parser->ParsePage(pagePos));
@@ -1018,8 +1013,6 @@ Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
                         }
                     }            
                 }
-                
-                delete parser;
             }
         }
     }

@@ -15,7 +15,7 @@ public:
     void __construct(Php::Parameters &params);
     Php::Value getCopies();
     Php::Value getPages();
-    std::vector<int> getTokenizedPages();
+    std::vector<int> getTokenizedPages(unsigned long pageCount);
     Php::Value getFilePath();
     Php::Value __toString();
 };
