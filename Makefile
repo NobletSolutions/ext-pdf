@@ -26,6 +26,9 @@ PHP_CONFIG ?= php-config
 PHP ?= $(or $(shell "$(PHP_CONFIG)" --php-binary 2>/dev/null),php)
 PHP_EXTENSION_DIR = $(shell "$(PHP_CONFIG)" --extension-dir 2>/dev/null)
 RUN_TESTS ?= $(firstword $(wildcard $(PHP_EXTENSION_DIR)/../build/run-tests.php $(PHP_EXTENSION_DIR)/build/run-tests.php))
+MOCK ?= mock
+MOCK_CONFIG_DIR ?= /etc/mock
+MOCK_RESULTS_DIR ?= $(CURDIR)/.build/mock
 
 #
 #	Php.ini directories
@@ -119,7 +122,7 @@ DEPFILES := $(OBJECTS:.o=.d)
 #	From here the build instructions start
 #
 
-.PHONY: all test install uninstall clean dist
+.PHONY: all test mock-matrix mock-smoke install uninstall clean dist
 .DELETE_ON_ERROR:
 
 all: ${EXTENSION}
@@ -132,16 +135,29 @@ test:
 	fi; \
 	test_dir=$$(mktemp -d); \
 	trap 'rm -rf "$$test_dir"' EXIT; \
-	$(MAKE) -C "$$test_dir" -f "$(PROJECT_DIR)Makefile" all; \
+	extension="$(TEST_EXTENSION)"; \
+	if [ -z "$$extension" ]; then \
+		$(MAKE) -C "$$test_dir" -f "$(PROJECT_DIR)Makefile" all; \
+		extension="$$test_dir/$(EXTENSION)"; \
+	else \
+		case "$$extension" in /*) ;; *) extension="$(CURDIR)/$$extension";; esac; \
+	fi; \
 	cp -R "$(PROJECT_DIR)tests" "$$test_dir/tests"; \
 	cp "$(RUN_TESTS)" "$$test_dir/run-tests.php"; \
-	extension="$$test_dir/$(EXTENSION)"; \
 	php=$$(command -v "$(PHP)"); \
 	case "$$php" in /*) ;; *) php="$(CURDIR)/$$php";; esac; \
 	cd "$$test_dir"; \
 	"$$php" -n -d "extension=$$extension" -r 'exit(extension_loaded("pdf") ? 0 : 1);'; \
 	REPORT_EXIT_STATUS=1 TEST_PHP_SRCDIR="$$test_dir" "$$php" -n run-tests.php -p "$$php" \
 		-q -n -d "extension=$$extension" --show-diff tests
+
+mock-matrix:
+	MOCK="$(MOCK)" MOCK_CONFIG_DIR="$(MOCK_CONFIG_DIR)" MOCK_RESULTS_DIR="$(MOCK_RESULTS_DIR)" \
+		sh "$(PROJECT_DIR)packaging/mock/matrix.sh" build "$(SRPM)"
+
+mock-smoke:
+	MOCK="$(MOCK)" MOCK_CONFIG_DIR="$(MOCK_CONFIG_DIR)" \
+		sh "$(PROJECT_DIR)packaging/mock/matrix.sh" smoke "$(MOCK_RUN_DIR)"
 
 ${EXTENSION}:	${OBJECTS}
 	${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}
