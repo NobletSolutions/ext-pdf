@@ -143,6 +143,8 @@ test:
 		case "$$extension" in /*) ;; *) extension="$(CURDIR)/$$extension";; esac; \
 	fi; \
 	cp -R "$(PROJECT_DIR)tests" "$$test_dir/tests"; \
+	mkdir "$$test_dir/fonts"; \
+	cp "$(PROJECT_DIR)fonts/arial.ttf" "$$test_dir/fonts/"; \
 	cp "$(RUN_TESTS)" "$$test_dir/run-tests.php"; \
 	php=$$(command -v "$(PHP)"); \
 	case "$$php" in /*) ;; *) php="$(CURDIR)/$$php";; esac; \
@@ -180,7 +182,7 @@ clean:
 	${RM} ${EXTENSION} ${OBJECTS} ${DEPFILES}
 
 dist: clean
-	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
+	tar --exclude-vcs-ignores --exclude-vcs --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
 	cp ../php-${NAME}-${VERSION}.tar.bz2 .
 
 -include $(DEPFILES)

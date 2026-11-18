@@ -65,7 +65,9 @@ void PdfDocument::__construct(Php::Parameters &params) {
     }
 
     filePath = params[0].stringValue();
-    _document = poppler::document::load_from_file(filePath);
+    const std::string ownerPassword = params.size() > 1 ? params[1].stringValue() : std::string();
+    const std::string userPassword = params.size() > 2 ? params[2].stringValue() : std::string();
+    _document = poppler::document::load_from_file(filePath, ownerPassword, userPassword);
 
     if(_document == NULL) {
 	    Php::warning << "Unable to open file as PDF" << std::flush;
