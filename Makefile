@@ -20,6 +20,11 @@
 
 NAME	= pdf
 VERSION	= 0.12.0
+SOURCE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+PHP_CONFIG ?= php-config
+PHP ?= $(or $(shell "$(PHP_CONFIG)" --php-binary 2>/dev/null),php)
+PHP_EXTENSION_DIR = $(shell "$(PHP_CONFIG)" --extension-dir 2>/dev/null)
+RUN_TESTS ?= $(firstword $(wildcard $(PHP_EXTENSION_DIR)/../build/run-tests.php $(PHP_EXTENSION_DIR)/build/run-tests.php))
 
 #
 #	Php.ini directories
@@ -29,7 +34,7 @@ VERSION	= 0.12.0
 #	one for each extension. Use this variable to specify this directory.
 #
 
-INI_DIR	=	$(shell php-config --ini-dir)
+INI_DIR	=	$(shell "$(PHP_CONFIG)" --ini-dir)
 
 #
 #	The extension dirs
@@ -40,7 +45,7 @@ INI_DIR	=	$(shell php-config --ini-dir)
 #	this with a different fixed directory
 #
 
-EXTENSION_DIR	=	$(shell php-config --extension-dir)
+EXTENSION_DIR	=	$(PHP_EXTENSION_DIR)
 
 
 #
@@ -105,15 +110,16 @@ MKDIR	=	mkdir -p
 
 
 #
-#	All source files are simply all *.cpp files found in the current directory
+#	All source files are *.cpp files found next to this Makefile.
 #
 #	A builtin Makefile macro is used to scan the current directory and find 
 #	all source files. The object files are all compiled versions of the source
 #	file, with the .cpp extension being replaced by .o.
 #
 
-SOURCES	=	$(wildcard *.cpp)
+SOURCES	=	$(notdir $(wildcard $(SOURCE_DIR)*.cpp))
 OBJECTS	=	$(SOURCES:%.cpp=%.o)
+vpath %.cpp $(SOURCE_DIR)
 
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
@@ -127,6 +133,26 @@ POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 #
 
 all:	${OBJECTS} ${EXTENSION}
+
+.PHONY: test
+test:
+	+@set -eu; \
+	if [ ! -r "$(RUN_TESTS)" ]; then \
+		echo "PHP's run-tests.php was not found. Set RUN_TESTS=/path/to/run-tests.php." >&2; \
+		exit 1; \
+	fi; \
+	test_dir=$$(mktemp -d); \
+	trap 'rm -rf "$$test_dir"' EXIT; \
+	$(MAKE) -C "$$test_dir" -f "$(SOURCE_DIR)Makefile" all; \
+	cp -R "$(SOURCE_DIR)tests" "$$test_dir/tests"; \
+	cp "$(RUN_TESTS)" "$$test_dir/run-tests.php"; \
+	extension="$$test_dir/$(EXTENSION)"; \
+	php=$$(command -v "$(PHP)"); \
+	case "$$php" in /*) ;; *) php="$(CURDIR)/$$php";; esac; \
+	cd "$$test_dir"; \
+	"$$php" -n -d "extension=$$extension" -r 'exit(extension_loaded("pdf") ? 0 : 1);'; \
+	REPORT_EXIT_STATUS=1 TEST_PHP_SRCDIR="$$test_dir" "$$php" -n run-tests.php -p "$$php" \
+		-q -n -d "extension=$$extension" --show-diff tests
 
 ${EXTENSION}:	${OBJECTS}
 	${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}

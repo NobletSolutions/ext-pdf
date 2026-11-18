@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <iterator>
 #include <map>
+#include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -146,7 +148,7 @@ void PdfWriter::__construct(Php::Parameters &params) {
     initializeFonts();
 }
 
-AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFont, double inFontSize, int64_t colorValue) {
+AbstractContentContext::TextOptions PdfWriter::getFont(std::string requestedFont, double inFontSize, int64_t colorValue) {
     std::map<std::string,std::string>::iterator it;
     PDFUsedFont * _font;
 
@@ -164,7 +166,7 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
             throw Php::Exception("Unable to locate font");
         }
 
-        return new AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, colorValue);
+        return AbstractContentContext::TextOptions(_font, inFontSize, AbstractContentContext::eRGB, colorValue);
     }
 
     Php::warning << "No such font: " << requestedFont << std::flush;
@@ -172,12 +174,11 @@ AbstractContentContext::TextOptions * PdfWriter::getFont(std::string requestedFo
 }
 
 void PdfWriter::setFont(Php::Parameters &params) {
-    defaultFontName.assign(params[0].stringValue());
-    if (params.size() == 2) {
-        defaultText = this->getFont(params[0].stringValue(), (double)params[1], 0);
-    } else if (params.size() == 1) {
-        defaultText = this->getFont(params[0].stringValue(), 10, 0);
-    }
+    std::string fontName = params[0].stringValue();
+    double fontSize = params.size() == 2 ? (double)params[1] : 10;
+    getFont(fontName, fontSize);
+    defaultFontName = std::move(fontName);
+    defaultFontSize = fontSize;
 }
 
 void PdfWriter::writeImageToPage(Php::Parameters &params) {
@@ -266,7 +267,7 @@ void PdfWriter::writeTextToPage(Php::Parameters &params)
         throw Php::Exception("Cannot write to a negative page");
     }
 
-    if (!defaultText) {
+    if (defaultFontName.empty()) {
         Php::warning << "No font set" << std::flush;
         throw Php::Exception("No font set!");
     }
@@ -425,25 +426,17 @@ void writeTextToPdf(double long x, double long y, std::string text, int pageRota
 }
 
 void PdfWriter::writeText(PdfText *obj, int pageRotation, const PDFRectangle &mediaBox, AbstractContentContext *contentContext) {
-    AbstractContentContext::TextOptions * options = NULL;
-
+    std::string fontName = defaultFontName;
+    double fontSize = defaultFontSize;
     if (obj->getFontSize() || obj->getFont() || obj->getColor() != 0) {
-        int _fontSize = 10;
-        std::string fontName(obj->getFont().stringValue());
-        if (fontName.empty()) {
-            fontName.assign(defaultFontName);
+        if (obj->getFont()) {
+            fontName = obj->getFont().stringValue();
         }
-
-        if (obj->getFontSize()) {
-            _fontSize = (int)obj->getFontSize();
-        }
-
-        options = this->getFont(fontName, _fontSize, obj->getColor());
-    } else {
-        options = defaultText;
+        fontSize = obj->getFontSize() ? (int)obj->getFontSize() : 10;
     }
 
-    writeTextToPdf((double)obj->getX(), (double)obj->getY(), obj->getText(), pageRotation, mediaBox, contentContext, options);
+    auto options = getFont(fontName, fontSize, obj->getColor());
+    writeTextToPdf((double)obj->getX(), (double)obj->getY(), obj->getText(), pageRotation, mediaBox, contentContext, &options);
 }
 
 void PdfWriter::writeImage(PdfImage *image, AbstractContentContext *contentContext) {
@@ -497,17 +490,9 @@ void modifyDictionary(PDFDictionary *source, DictionaryContext *newDictionary, P
     }
 }
 
-bool removeForm(const char * inputFile, const char * outputFile) {
-    char tempFileName[] = "/tmp/pdf-post-flattened-XXXXXX";
-    int fd;
-
-    if ((fd = mkstemp(tempFileName)) == -1) {
-        fprintf(stderr, "Failed with error %s\n", strerror(errno));
-        return false;
-    }
-
+static bool removeForm(const std::string& inputFile, const std::string& outputFile, const std::string& intermediate) {
     PDFWriter writer;
-    EStatusCode status = writer.ModifyPDF(inputFile, ePDFVersionUndefined, tempFileName);
+    EStatusCode status = writer.ModifyPDF(inputFile, ePDFVersionUndefined, intermediate);
     if(status != EStatusCode::eSuccess){
         std::cerr << "Unable to open " << inputFile << std::endl;
         return false;
@@ -583,169 +568,219 @@ bool removeForm(const char * inputFile, const char * outputFile) {
     }
 
     // Write everything out
-    writer.EndPDF();
+    if (writer.EndPDF() != eSuccess) {
+        return false;
+    }
 
     // Because everything above is just "re-written", the PDF created at the end of the line above is actually bigger.
     // Nothing done there other than copying a bunch of indexes excluding the parts we want.
     // This reads the PDF and copies everything, but only the resulting data, thus making it smaller and only copying
     // none deleted pdf instructions/commands
-	PDFWriter::RecryptPDF(
-		tempFileName,
-		"",
-		outputFile,
+    return PDFWriter::RecryptPDF(
+        intermediate,
+        "",
+        outputFile,
         LogConfiguration::DefaultLogConfiguration(),
         PDFCreationSettings(true, true),
-		ePDFVersionUndefined
-    );
+        ePDFVersionUndefined
+    ) == eSuccess;
+}
 
-    unlink(tempFileName);
-    return true;
+namespace {
+
+unsigned long parsePageNumber(const std::string& text) {
+    const size_t first = text.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos || text[first] < '0' || text[first] > '9') {
+        throw Php::Exception("Page numbers must be positive integers");
+    }
+
+    const char* start = text.c_str() + first;
+    char* end;
+    errno = 0;
+    const unsigned long number = strtoul(start, &end, 10);
+    if (errno == ERANGE || number == 0 ||
+        text.find_first_not_of(" \t\r\n", end - text.c_str()) != std::string::npos) {
+        throw Php::Exception("Page numbers must be positive integers");
+    }
+    return number - 1;
+}
+
+class SaveFiles {
+    std::string directory;
+
+public:
+    std::string modified;
+    std::string selected;
+    std::string formRemoved;
+    std::string flattened;
+
+    explicit SaveFiles(const std::string& output) {
+        const size_t slash = output.find_last_of('/');
+        directory = output.substr(0, slash == std::string::npos ? 0 : slash + 1) + ".php-pdf-XXXXXX";
+        if (!mkdtemp(&directory[0])) {
+            throw Php::Exception("Unable to create a temporary directory for saving the PDF");
+        }
+        modified = directory + "/modified.pdf";
+        selected = directory + "/selected.pdf";
+        formRemoved = directory + "/form-removed.pdf";
+        flattened = directory + "/flattened.pdf";
+    }
+
+    ~SaveFiles() {
+        unlink(modified.c_str());
+        unlink(selected.c_str());
+        unlink(formRemoved.c_str());
+        unlink(flattened.c_str());
+        rmdir(directory.c_str());
+    }
+
+    void publish(const std::string& output) const {
+        struct stat destination;
+        if (lstat(output.c_str(), &destination) == 0) {
+            if (!S_ISREG(destination.st_mode) || chmod(selected.c_str(), destination.st_mode & 0777) != 0) {
+                throw Php::Exception("Unable to replace " + output);
+            }
+        }
+        if (rename(selected.c_str(), output.c_str()) != 0) {
+            throw Php::Exception("Unable to replace " + output);
+        }
+    }
+};
+
+template <typename T>
+void clearPageModifications(std::unordered_map<double, std::vector<T*>>& modifications) {
+    for (const auto& page : modifications) {
+        for (auto* item : page.second) {
+            delete item;
+        }
+    }
+    modifications.clear();
+}
+
 }
 
 void PdfWriter::writePdf(Php::Parameters &params) {
-    EStatusCode status;
-
-    //We flatten first because for whatever reason if we flatten afterwards the form is gone but so is our content.
-    if (flatten) {
-        char tempFileName[] = "/tmp/pdf-pre-flattened-XXXXXX";
-        int fd;
-
-        if ((fd = mkstemp(tempFileName)) == -1) {
-            fprintf(stderr, "Failed with error %s\n", strerror(errno));
-            return;
-        }
-
-        std::ifstream  src(_inputFileName.c_str(), std::ios::binary);
-        std::ofstream  dst(tempFileName, std::ios::binary);
-
-        // Copy the source to the destination
-        dst << src.rdbuf();
-        removeForm(_inputFileName.c_str(), tempFileName);
-        status = writer.ModifyPDF(tempFileName, ePDFVersionUndefined, _outputFileName);
-        unlink(tempFileName);
-    } else {
-        status = writer.ModifyPDF(_inputFileName, ePDFVersionUndefined, _outputFileName);
-    }
-
-    if (status != eSuccess) {
-        Php::warning << "Unable to open " << _inputFileName << std::flush;
-        throw Php::Exception("Unable to open file");
-    }
-
-    int pagePos = 0;
-    while (true) {
-        PDFModifiedPage thePage(&writer, pagePos, true);
-        AbstractContentContext* contentContext = thePage.StartContentContext();
-
-        if (!contentContext) {
-            break;
-        }
-
-        RefCountPtr<PDFDictionary> page = writer.GetModifiedFileParser().ParsePage(pagePos);
-        PDFPageInput pageInput(&writer.GetModifiedFileParser(), page);
-        PDFRectangle mediaBox = pageInput.GetMediaBox();
-        int pageRotation      = pageInput.GetRotate();
-
-        // see if there are images destined for this page and write them at the same time
-        auto images = pageImages.find(pagePos);
-
-        if (images != pageImages.end()) {
-            for (const auto& i : images->second) {
-                this->writeImage(i, contentContext);
-                delete i;
-            }
-
-            pageImages.erase(images);
-        }
-
-        auto rectangles = pageRectangles.find(pagePos);
-        if (rectangles != pageRectangles.end()) {
-            for (const auto &i : rectangles->second) {
-                this->writeRectangle(i, contentContext);
-                delete i;
-            }
-        }
-
-        auto lines = pageLines.find(pagePos);
-        if (lines != pageLines.end()) {
-            for (const auto &i : lines->second) {
-                this->writeLine(i, contentContext);
-                delete i;
-            }
-        }
-
-        // find text - written last to be on "top"
-        auto textSearch = pageText.find(pagePos);
-        if (textSearch != pageText.end()) {
-            for (const auto &iter : textSearch->second) {
-                this->writeText(iter, pageRotation, mediaBox, contentContext);
-                delete iter;
-            }
-        }
-
-        thePage.EndContentContext();
-        thePage.WritePage();
-
-        pagePos++;
-    }
-
-    pageText.clear();
-    pageImages.clear();
-    pageRectangles.clear();
-    pageLines.clear();
-    writer.EndPDF();
-
-    // requesting only particular pages
+    ULongAndULongList ranges;
     if (!params.empty()) {
-        char tempFileName[] = "/tmp/pdf-pages-XXXXXX";
-        int fd;
-
-        if ((fd = mkstemp(tempFileName)) == -1) {
-            fprintf(stderr, "Failed with error %s\n", strerror(errno));
-            return;
-        }
-
-        // https://stackoverflow.com/questions/32445579/when-a-file-created-with-mkstemp-is-deleted
-        unlink(tempFileName);
-
-        FILE *fh = fdopen(fd, "w");
-
-        std::ifstream  src(_outputFileName.c_str(), std::ios::binary);
-        std::ofstream  dst(tempFileName, std::ios::binary);
-
-        // Copy the source to the destination
-        dst << src.rdbuf();
-
-        PDFPageRange pageRange;
-
-        pageRange.mType = PDFPageRange::eRangeTypeSpecific;
-        std::size_t found = std::string::npos;
-        std::string::size_type sz;
-
-        for (auto &iter : params[0]) {
-            found = iter.second.stringValue().find('-');
-            if(found != std::string::npos) {
-                std::vector<std::string> v = split(iter.second.stringValue(), '-');
-                pageRange.mSpecificRanges.push_back(ULongAndULong(std::stol (v[0],&sz)-1, std::stol (v[1],&sz)-1));
-            } else {
-                long li_dec = std::stol(iter.second.stringValue(),&sz) - 1;
-                pageRange.mSpecificRanges.push_back(ULongAndULong(li_dec, li_dec));
+        for (const auto& item : params[0]) {
+            const std::string range = item.second.stringValue();
+            const size_t dash = range.find('-');
+            const unsigned long first = parsePageNumber(range.substr(0, dash));
+            const unsigned long last = dash == std::string::npos ? first : parsePageNumber(range.substr(dash + 1));
+            if (first > last) {
+                throw Php::Exception("Page ranges must be in ascending order");
             }
+            ranges.emplace_back(first, last);
         }
+    }
 
-        // Need a second instance of the writer for encrypted documents to work
-        PDFWriter writer2;
-        EStatusCode status;
-        status = writer2.StartPDF(_outputFileName, ePDFVersion14);
-        if (status != eSuccess) {
-            Php::warning << "Unable to open " << _outputFileName << std::flush;
+    const bool selectPages = !ranges.empty();
+    std::unique_ptr<SaveFiles> files;
+    if (selectPages || flatten) {
+        files.reset(new SaveFiles(_outputFileName));
+    }
+
+    // Flattening after applying the queued modifications can remove that content too.
+    if (flatten && !removeForm(_inputFileName, files->flattened, files->formRemoved)) {
+        throw Php::Exception("Unable to flatten PDF");
+    }
+    const std::string& input = flatten ? files->flattened : _inputFileName;
+    const std::string& modifiedOutput = selectPages ? files->modified : _outputFileName;
+
+    try {
+        if (writer.ModifyPDF(input, ePDFVersionUndefined, modifiedOutput) != eSuccess) {
+            Php::warning << "Unable to open " << _inputFileName << std::flush;
             throw Php::Exception("Unable to open file");
         }
 
-        writer2.AppendPDFPagesFromPDF(tempFileName, pageRange);
-        writer2.EndPDF();
-        fclose(fh);
+        PDFParser& parser = writer.GetModifiedFileParser();
+        const unsigned long pageCount = parser.GetPagesCount();
+        for (const auto& range : ranges) {
+            if (range.second >= pageCount) {
+                throw Php::Exception("Selected page is outside the PDF");
+            }
+        }
+
+        for (unsigned long pagePos = 0; pagePos < pageCount; ++pagePos) {
+            PDFModifiedPage thePage(&writer, pagePos, true);
+            AbstractContentContext* contentContext = thePage.StartContentContext();
+            if (!contentContext) {
+                throw Php::Exception("Unable to open PDF page content");
+            }
+
+            auto images = pageImages.find(pagePos);
+            if (images != pageImages.end()) {
+                for (auto* image : images->second) {
+                    writeImage(image, contentContext);
+                }
+            }
+
+            auto rectangles = pageRectangles.find(pagePos);
+            if (rectangles != pageRectangles.end()) {
+                for (auto* rectangle : rectangles->second) {
+                    writeRectangle(rectangle, contentContext);
+                }
+            }
+
+            auto lines = pageLines.find(pagePos);
+            if (lines != pageLines.end()) {
+                for (auto* line : lines->second) {
+                    writeLine(line, contentContext);
+                }
+            }
+
+            auto text = pageText.find(pagePos);
+            if (text != pageText.end()) {
+                RefCountPtr<PDFDictionary> page = parser.ParsePage(pagePos);
+                PDFPageInput pageInput(&parser, page);
+                for (auto* item : text->second) {
+                    writeText(item, pageInput.GetRotate(), pageInput.GetMediaBox(), contentContext);
+                }
+            }
+
+            if (thePage.EndContentContext() != eSuccess || thePage.WritePage() != eSuccess) {
+                throw Php::Exception("Unable to write PDF page");
+            }
+        }
+
+        if (writer.EndPDF() != eSuccess) {
+            throw Php::Exception("Unable to finish writing PDF");
+        }
+    } catch (...) {
+        writer.Reset();
+        throw;
     }
+
+    if (selectPages) {
+        PDFWriter selectedWriter;
+        if (selectedWriter.StartPDF(files->selected, ePDFVersion14) != eSuccess) {
+            throw Php::Exception("Unable to open the selected-pages PDF");
+        }
+
+        std::unique_ptr<PDFDocumentCopyingContext> copying(selectedWriter.CreatePDFCopyingContext(files->modified));
+        if (!copying) {
+            throw Php::Exception("Unable to open the modified PDF for copying");
+        }
+
+        for (const auto& selection : ranges) {
+            for (unsigned long page = selection.first; page <= selection.second; ++page) {
+                if (copying->AppendPDFPageFromPDF(page).first != eSuccess) {
+                    throw Php::Exception("Unable to copy selected PDF pages");
+                }
+            }
+        }
+        copying.reset();
+
+        if (selectedWriter.EndPDF() != eSuccess) {
+            throw Php::Exception("Unable to finish the selected-pages PDF");
+        }
+        files->publish(_outputFileName);
+    }
+
+    clearPageModifications(pageText);
+    clearPageModifications(pageImages);
+    clearPageModifications(pageRectangles);
+    clearPageModifications(pageLines);
 }
 
 

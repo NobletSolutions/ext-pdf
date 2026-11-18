@@ -7,3 +7,4 @@
 .vscode
 *.pdf
 *.tar.bz2
+/crashes/

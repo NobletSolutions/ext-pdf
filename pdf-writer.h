@@ -32,10 +32,9 @@ private:
     AbstractContentContext * contentContext;// = NULL;
     AbstractContentContext::TextOptions * textOptions;// = NULL;
     std::string defaultFontName;
-    PDFUsedFont * defaultFont;// = NULL;
-    AbstractContentContext::TextOptions * defaultText;// = NULL;
+    double defaultFontSize = 10;
     int64_t pageNum = -1;
-    AbstractContentContext::TextOptions * getFont(std::string requestedFont, double inFontSize = 10, int64_t color = 0);
+    AbstractContentContext::TextOptions getFont(std::string requestedFont, double inFontSize = 10, int64_t color = 0);
     std::string _inputFileName;
     std::string _outputFileName;
     bool flatten = false;
