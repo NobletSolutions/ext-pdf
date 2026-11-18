@@ -20,7 +20,8 @@
 
 NAME	= pdf
 VERSION	= 0.12.0
-SOURCE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+PROJECT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+SOURCE_DIR := $(PROJECT_DIR)src
 PHP_CONFIG ?= php-config
 PHP ?= $(or $(shell "$(PHP_CONFIG)" --php-binary 2>/dev/null),php)
 PHP_EXTENSION_DIR = $(shell "$(PHP_CONFIG)" --extension-dir 2>/dev/null)
@@ -92,7 +93,7 @@ POPPLER_HAS_JS := $(shell grep -qn has_js /usr/include/poppler/cpp/poppler-docum
 POPPLER_HAS_NEW_DATE_T := $(shell grep -qn info_date_t /usr/include/poppler/cpp/poppler-document.h && echo 1 || echo 0)
 
 COMPILER_DEFINES    = -DVERSION=\"${VERSION}\" -DPOPPLER_HAS_NEW_DATE_T=${POPPLER_HAS_NEW_DATE_T} -DPOPPLER_HAS_JS=${POPPLER_HAS_JS}
-COMPILER_FLAGS		= -Wall -g -c -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS) $(COMPILER_DEFINES)
+COMPILER_FLAGS		= -Wall -g -O2 -std=c++11 -fPIC `pkg-config poppler-cpp fontconfig openssl --cflags` $(CFLAGS) $(COMPILER_DEFINES)
 LINKER_FLAGS		= -shared
 LINKER_DEPENDENCIES	= $(LIBFLAGS) -lphpcpp -lPDFWriter `pkg-config poppler-cpp fontconfig openssl --libs`
 
@@ -109,32 +110,20 @@ CP		=	cp -f
 MKDIR	=	mkdir -p
 
 
-#
-#	All source files are *.cpp files found next to this Makefile.
-#
-#	A builtin Makefile macro is used to scan the current directory and find 
-#	all source files. The object files are all compiled versions of the source
-#	file, with the .cpp extension being replaced by .o.
-#
-
-SOURCES	=	$(notdir $(wildcard $(SOURCE_DIR)*.cpp))
-OBJECTS	=	$(SOURCES:%.cpp=%.o)
-vpath %.cpp $(SOURCE_DIR)
-
-DEPDIR := .d
-$(shell mkdir -p $(DEPDIR) >/dev/null)
-DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cpp = $(CXX) $(DEPFLAGS) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
-
-POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
+BUILD_DIR := .build
+SOURCES := $(wildcard $(SOURCE_DIR)/*.cpp)
+OBJECTS := $(patsubst $(SOURCE_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
+DEPFILES := $(OBJECTS:.o=.d)
 
 #
 #	From here the build instructions start
 #
 
-all:	${OBJECTS} ${EXTENSION}
+.PHONY: all test install uninstall clean dist
+.DELETE_ON_ERROR:
 
-.PHONY: test
+all: ${EXTENSION}
+
 test:
 	+@set -eu; \
 	if [ ! -r "$(RUN_TESTS)" ]; then \
@@ -143,8 +132,8 @@ test:
 	fi; \
 	test_dir=$$(mktemp -d); \
 	trap 'rm -rf "$$test_dir"' EXIT; \
-	$(MAKE) -C "$$test_dir" -f "$(SOURCE_DIR)Makefile" all; \
-	cp -R "$(SOURCE_DIR)tests" "$$test_dir/tests"; \
+	$(MAKE) -C "$$test_dir" -f "$(PROJECT_DIR)Makefile" all; \
+	cp -R "$(PROJECT_DIR)tests" "$$test_dir/tests"; \
 	cp "$(RUN_TESTS)" "$$test_dir/run-tests.php"; \
 	extension="$$test_dir/$(EXTENSION)"; \
 	php=$$(command -v "$(PHP)"); \
@@ -157,9 +146,11 @@ test:
 ${EXTENSION}:	${OBJECTS}
 	${LINKER} ${LINKER_FLAGS} -o $@ ${OBJECTS} ${LINKER_DEPENDENCIES}
 
-%.o: %.cpp $(DEPDIR)/%.d
-	$(COMPILE.cpp) $<
-	$(POSTCOMPILE)
+$(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp | $(BUILD_DIR)
+	$(CXX) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -MMD -MP -MF "$(@:.o=.d)" -c -o "$@" "$<"
+
+$(BUILD_DIR):
+	$(MKDIR) "$@"
 
 install:		
 	${CP} ${EXTENSION} $(DESTDIR)/${EXTENSION_DIR}
@@ -170,13 +161,10 @@ uninstall:
 	rm $(DESTDIR)/${INI_DIR}/60-${INI}
 
 clean:
-	${RM} ${EXTENSION} ${OBJECTS}
+	${RM} ${EXTENSION} ${OBJECTS} ${DEPFILES}
 
 dist: clean
 	tar --exclude-vcs-ignores --exclude-vcs --exclude=test.php --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
 	cp ../php-${NAME}-${VERSION}.tar.bz2 .
 
-$(DEPDIR)/%.d: ;
-.PRECIOUS: $(DEPDIR)/%.d
-
-include $(wildcard $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS))))
+-include $(DEPFILES)

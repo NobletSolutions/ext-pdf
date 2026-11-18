@@ -1,6 +1,7 @@
 *.so
 *.o
 .d
+/.build/
 .settings
 .cproject
 .project
