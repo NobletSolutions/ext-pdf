@@ -14,6 +14,12 @@ Pdf\PdfWriter::complexCombine(destination: 'output.pdf', documents: $documents);
 
 `new Pdf\PdfDocument($path, $ownerPassword, $userPassword)` takes the owner password second and the user password third. The corresponding PHP parameter names are `user` and `password`. Pass an empty string as the second argument when you only have the user password.
 
+### PDF content hashes
+
+`PdfDocument::hashContent()` and `PdfDocument::hashDocument($path)` return a lowercase SHA-256 digest of the file bytes. When PDFWriter resolves the trailer's standalone `/Info` dictionary, the hash omits bytes from its cross-reference offset through the first literal `endobj` in the legacy 4 KiB search window, before any NUL byte. If that window has no match, the object terminator is located with the PDF tokenizer. Bytes outside that range, including other metadata, cross-reference tables, and trailer entries, contribute to the digest. Changes to those bytes can change the digest even when only metadata was edited.
+
+For compatibility, an Info position on a 4 KiB boundary leaves the file intact. For compressed Info entries, the legacy search starts at the byte offset equal to the object-stream number. The entire file is hashed if that search finds no match, or if PDFWriter cannot find a usable trailer or Info reference. I/O failures and invalid Info types or standalone objects raise an exception.
+
 ## AlmaLinux 9 RPM matrix
 
 Run the same source RPM against the existing `alma+epel-9-x86_64-php{83,84,85}.cfg` Mock configs in `/etc/mock`. Use a host with working Mock access.

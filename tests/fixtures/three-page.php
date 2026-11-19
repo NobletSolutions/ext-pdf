@@ -1,6 +1,12 @@
 <?php
 
-function writeThreePagePdf(string $path, string $prefix = 'Page', bool $withMetadata = false): void
+function writeThreePagePdf(
+    string $path,
+    string $prefix = 'Page',
+    bool $withMetadata = false,
+    string $creator = 'PHPT Fixture',
+    int $infoOffset = 0
+): void
 {
     $objects = [
         '<< /Type /Catalog /Pages 2 0 R >>',
@@ -18,13 +24,16 @@ function writeThreePagePdf(string $path, string $prefix = 'Page', bool $withMeta
 
     $info = '';
     if ($withMetadata) {
-        $objects[] = '<< /Creator (PHPT Fixture) /CreationDate (D:20240102030405Z) /ModDate (D:20240203040506Z) >>';
+        $objects[] = "<< /Creator ($creator) /CreationDate (D:20240102030405Z) /ModDate (D:20240203040506Z) >>";
         $info = ' /Info ' . count($objects) . ' 0 R';
     }
 
     $pdf = "%PDF-1.4\n";
     $xref = "0000000000 65535 f \n";
     foreach ($objects as $index => $object) {
+        if ($infoOffset > 0 && $withMetadata && $index === count($objects) - 1) {
+            $pdf .= '%' . str_repeat(' ', $infoOffset - strlen($pdf) - 2) . "\n";
+        }
         $xref .= sprintf("%010d 00000 n \n", strlen($pdf));
         $pdf .= ($index + 1) . " 0 obj\n" . $object . "\nendobj\n";
     }
