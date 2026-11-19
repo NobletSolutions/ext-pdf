@@ -19,9 +19,9 @@
 #
 
 NAME	= pdf
-VERSION	= 0.12.0
 PROJECT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SOURCE_DIR := $(PROJECT_DIR)src
+VERSION := $(shell awk '$$1 == "Version:" { print $$2; exit }' "$(PROJECT_DIR)php-pdf.spec")
 PHP_CONFIG ?= php-config
 PHP ?= $(or $(shell "$(PHP_CONFIG)" --php-binary 2>/dev/null),php)
 PHP_EXTENSION_DIR = $(shell "$(PHP_CONFIG)" --extension-dir 2>/dev/null)
@@ -29,6 +29,7 @@ RUN_TESTS ?= $(firstword $(wildcard $(PHP_EXTENSION_DIR)/../build/run-tests.php 
 MOCK ?= mock
 MOCK_CONFIG_DIR ?= /etc/mock
 MOCK_RESULTS_DIR ?= $(CURDIR)/.build/mock
+RELEASE_DIR ?= $(CURDIR)/.build/release
 
 #
 #	Php.ini directories
@@ -122,7 +123,7 @@ DEPFILES := $(OBJECTS:.o=.d)
 #	From here the build instructions start
 #
 
-.PHONY: all test mock-matrix mock-smoke install uninstall clean dist
+.PHONY: all test mock-matrix mock-smoke install uninstall clean dist srpm release
 .DELETE_ON_ERROR:
 
 all: ${EXTENSION}
@@ -167,6 +168,8 @@ ${EXTENSION}:	${OBJECTS}
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(COMPILER_FLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -MMD -MP -MF "$(@:.o=.d)" -c -o "$@" "$<"
 
+$(BUILD_DIR)/main.o: $(PROJECT_DIR)php-pdf.spec
+
 $(BUILD_DIR):
 	$(MKDIR) "$@"
 
@@ -181,8 +184,8 @@ uninstall:
 clean:
 	${RM} ${EXTENSION} ${OBJECTS} ${DEPFILES}
 
-dist: clean
-	tar --exclude-vcs-ignores --exclude-vcs --exclude=*tar.bz2 --transform 's,^\.,php-${NAME}-${VERSION},' -cjf ../php-${NAME}-${VERSION}.tar.bz2 .
-	cp ../php-${NAME}-${VERSION}.tar.bz2 .
+dist srpm release:
+	MOCK="$(MOCK)" MOCK_CONFIG_DIR="$(MOCK_CONFIG_DIR)" MOCK_RESULTS_DIR="$(MOCK_RESULTS_DIR)" \
+		sh "$(PROJECT_DIR)packaging/release.sh" "$@" "$(REF)" "$(RELEASE_DIR)"
 
 -include $(DEPFILES)

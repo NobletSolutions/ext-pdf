@@ -46,6 +46,7 @@ smoke_package() (
     fi
     rpm_file=$1
     expected=$(rpm -qp --qf '%{NEVRA}' -- "$rpm_file") || exit 1
+    expected_version=$(rpm -qp --qf '%{VERSION}' -- "$rpm_file") || exit 1
 
     probe=$(cat <<'SH'
 unset PHPRC PHP_INI_SCAN_DIR
@@ -68,7 +69,11 @@ printf 'Installed %s\n' "$2"
         exit(1);
     }
     printf("Scanned %s\n", $argv[2]);
-' "$1" "$ini"
+    if (phpversion("pdf") !== $argv[3]) {
+        fprintf(STDERR, "Expected pdf %s, found %s\n", $argv[3], phpversion("pdf") ?: "no extension");
+        exit(1);
+    }
+' "$1" "$ini" "$3"
 if /usr/bin/php -n --ri pdf >/dev/null 2>&1; then
     echo 'pdf also loaded with INI processing disabled' >&2
     exit 1
@@ -79,7 +84,7 @@ SH
     result=0
     smoke_mock --init &&
         smoke_mock --install php-cli "$rpm_file" &&
-        smoke_mock --chroot --unpriv -- /bin/sh -ec "$probe" sh "$series" "$expected" ||
+        smoke_mock --chroot --unpriv -- /bin/sh -ec "$probe" sh "$series" "$expected" "$expected_version" ||
         result=$?
     smoke_mock --clean || result=1
     exit "$result"

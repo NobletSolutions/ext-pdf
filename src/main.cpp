@@ -11,7 +11,7 @@
 #include "pdf-line.h"
 
 #ifndef VERSION
-#define VERSION "0.11.24"
+#error "VERSION must be defined by the build"
 #endif
 
 #ifndef POPPLER_HAS_JS

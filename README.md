@@ -34,22 +34,18 @@ The PHP 8.4 entry includes the existing system config and redirects its retired 
 
 RPM's `%check` loads the staged extension and runs the PHPT suite. In the matrix it also checks that the buildroot's PHP CLI matches the requested major and minor version.
 
-After each build, the matrix installs the resulting binary RPM and `php-cli` into a fresh matching Mock chroot. It verifies that PHP scans the RPM-owned `/etc/php.d/60-pdf.ini` and that `php --ri pdf` succeeds. Smoke logs are saved under `smoke.*/php{83,84,85}/` in the matrix result directory. To repeat the smoke tests for an existing run, use the following command.
+After each build, the matrix installs the resulting binary RPM and `php-cli` into a fresh matching Mock chroot. It verifies that PHP scans the RPM-owned `/etc/php.d/60-pdf.ini`, that the loaded extension reports the RPM version, and that `php --ri pdf` succeeds. Smoke logs are saved under `smoke.*/php{83,84,85}/` in the matrix result directory. To repeat the smoke tests for an existing run, use the following command.
 
 ```sh
 make mock-smoke MOCK_RUN_DIR=/path/to/matrix-run
 ```
 
-To create the SRPM from a Git revision that includes the RPM test configuration, run these commands from the checkout on a host with `rpmbuild`, `rpmspec`, and `bzip2`.
+## Building a release
+
+Pass an explicit Git ref to build the source archive and SRPM, run the Mock matrix, and smoke-test the installed RPMs. The packaging tools are `git`, `rpmspec`, `rpmbuild`, and `bzip2`.
 
 ```sh
-ref=HEAD
-topdir=$(mktemp -d)
-mkdir -p "$topdir/SOURCES" "$topdir/SPECS"
-spec="$topdir/SPECS/php-pdf.spec"
-git show "$ref:php-pdf.spec" > "$spec"
-package=$(rpmspec -q --srpm --qf '%{NAME}-%{VERSION}' "$spec")
-git archive --prefix="$package/" "$ref" | bzip2 > "$topdir/SOURCES/$package.tar.bz2"
-rpmbuild -bs --define "_topdir $topdir" "$spec"
-make mock-matrix SRPM="$(find "$topdir/SRPMS" -name '*.src.rpm' -print)"
+make release REF=v0.12.1
 ```
+
+The archive and spec both come from the resolved commit. The spec supplies the version used by the RPM and the extension. Source artifacts go in `.build/release/<commit>/`, or under `RELEASE_DIR` if set. Use `make dist REF=<ref>` for just the archive or `make srpm REF=<ref>` for the archive and SRPM.
