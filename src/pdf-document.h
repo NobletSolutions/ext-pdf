@@ -11,6 +11,7 @@
 #include <phpcpp.h>
 #include <iostream>
 #include <cstring>
+#include <memory>
 #include <poppler-document.h>
 #include <poppler-page.h>
 #include <poppler-image.h>
@@ -27,12 +28,8 @@ protected:
     int _major = 0;
     int _minor = 0;
     std::string filePath;
-    poppler::document *_document = NULL;
-    PdfImageFormat * jpeg = NULL;
-    PdfImageFormat * png = NULL;
-    PdfImageFormat * tiff = NULL;
+    std::shared_ptr<poppler::document> _document;
 public:
-    PdfDocument();
     void __construct(Php::Parameters &params);
     Php::Value getMajorVersion();
     Php::Value getMinorVersion();
@@ -53,7 +50,7 @@ public:
     Php::Value compare(Php::Parameters &params);
     Php::Value hash(Php::Parameters &params);
 private:
-    PdfImageFormat * getImageFormat(int inFormat);
+    static PdfImageFormat getImageFormat(int inFormat);
 };
 
 #endif /* PDF_DOCUMENT_H_ */

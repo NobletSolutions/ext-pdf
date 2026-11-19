@@ -52,12 +52,6 @@ static int _mkdir(const char *dir) {
     return mkdir(tmp, S_IRWXU);
 }
 
-PdfDocument::PdfDocument() {
-    jpeg = new PdfImageFormat("jpeg", "jpg");
-    png = new PdfImageFormat("png", "png");
-    tiff = new PdfImageFormat("tiff", "tif");
-}
-
 void PdfDocument::__construct(Php::Parameters &params) {
     if (!file_exists(params[0])) {
         Php::warning << "File " << params[0] << " doesn't exist" << std::flush;
@@ -67,9 +61,9 @@ void PdfDocument::__construct(Php::Parameters &params) {
     filePath = params[0].stringValue();
     const std::string ownerPassword = params.size() > 1 ? params[1].stringValue() : std::string();
     const std::string userPassword = params.size() > 2 ? params[2].stringValue() : std::string();
-    _document = poppler::document::load_from_file(filePath, ownerPassword, userPassword);
+    _document.reset(poppler::document::load_from_file(filePath, ownerPassword, userPassword));
 
-    if(_document == NULL) {
+    if (!_document) {
 	    Php::warning << "Unable to open file as PDF" << std::flush;
 	    throw Php::Exception("File is not a PDF");
     }
@@ -195,85 +189,51 @@ Php::Value PdfDocument::asString() {
 }
 
 Php::Value PdfDocument::toImage(Php::Parameters &params) {
-    int firstPage = 0;
-    int lastPage = _document->pages();
-    int resolution = 75;
-    int x;
-    Php::Value returnValue;
-
-    PdfImageFormat * format = NULL;
-    poppler::page *page;
-    poppler::page_renderer *renderer;
-    poppler::image image;
-
-    format = this->getImageFormat(params[0]);
-    if (format == NULL) {
-        //Php::warning << "Unable to determine type" << std::flush;
+    const std::string outputPattern = params[1].stringValue();
+    if (outputPattern.size() + 10 > PATH_MAX) {
         return false;
     }
 
-    if (params[1].size() + 10 > PATH_MAX) {
-        //Php::warning << "Path is larger than " << PATH_MAX << " chars - Unable to proceed" << std::flush;
-        return false;
-    }
-
-    if (params.size() == 3) {
-        resolution = params[2];
-    }
-
-    renderer                  = new poppler::page_renderer();
-    std::string outputPattern = params[1].stringValue();
-    size_t found              = outputPattern.find_last_of("/");
-
-    if (found == std::string::npos) {
+    const size_t slash = outputPattern.find_last_of('/');
+    if (slash == std::string::npos) {
         throw Php::Exception("Unable to locate output directory");
     }
 
-    std::string outputDirectory = outputPattern.substr(0, found);
-    std::string outputFile = outputPattern.substr(found+1);
-    // Php::out << "OutputDirectory: " << outputDirectory.c_str() << std::endl;
-
-    // Check/Create the requested output directory
+    const std::string outputDirectory = outputPattern.substr(0, slash == 0 ? 1 : slash);
     if (!file_exists(outputDirectory.c_str()) && _mkdir(outputDirectory.c_str()) != 0) {
         Php::warning << "PHP-PDF: Unable to create dir " << outputDirectory.c_str() << " because '" << strerror(errno) << "'" << std::flush;
         throw Php::Exception("Unable to create directory");
     }
 
-    int imageWidth = 0;
-    int imageHeight = 0;
-    int pageWidth = 0;
-    int pageHeight = 0;
-    char *outFile = (char*)malloc(PATH_MAX);
+    const int resolution = params.size() == 3 ? static_cast<int>(params[2]) : 75;
+    PdfImageFormat format = getImageFormat(params[0]);
+    poppler::page_renderer renderer;
+    Php::Value returnValue;
 
-    for (x = firstPage; x < lastPage; x++) {
-        imageWidth = 0;
-        imageHeight = 0;
-        pageWidth = 0;
-        pageHeight = 0;
-
-        memset(outFile, 0, PATH_MAX);
-        sprintf(outFile, "%s/%s-%d.%s", outputDirectory.c_str(), outputFile.c_str(), x, format->getExtension());
-
-        page = _document->create_page(x);
-
-        poppler::rectf pageDim = page->page_rect();
-        poppler::page::orientation_enum orientation = page->orientation();
-
-        if (orientation == poppler::page::orientation_enum::landscape || orientation == poppler::page::orientation_enum::seascape) {
-            pageWidth = pageDim.height();
-            pageHeight = pageDim.width();
-        } else {
-            pageWidth = pageDim.width();
-            pageHeight = pageDim.height();
+    const int pageCount = _document->pages();
+    for (int index = 0; index < pageCount; ++index) {
+        const std::unique_ptr<poppler::page> page(_document->create_page(index));
+        if (!page) {
+            throw Php::Exception("Unable to read PDF page " + std::to_string(index + 1));
         }
 
-        image = renderer->render_page(page, resolution, resolution, 0, 0, -1, -1, poppler::rotation_enum::rotate_0);
-        image.save(outFile, format->getFormat(), resolution);
+        const poppler::rectf dimensions = page->page_rect();
+        const auto orientation = page->orientation();
+        const bool sideways = orientation == poppler::page::landscape || orientation == poppler::page::seascape;
+        const int pageWidth = sideways ? dimensions.height() : dimensions.width();
+        const int pageHeight = sideways ? dimensions.width() : dimensions.height();
 
-        imageWidth = image.width();
-        imageHeight = image.height();
+        const auto image = renderer.render_page(page.get(), resolution, resolution, 0, 0, -1, -1, poppler::rotation_enum::rotate_0);
+        if (!image.is_valid()) {
+            throw Php::Exception("Unable to render PDF page " + std::to_string(index + 1));
+        }
 
-        returnValue[x] = Php::Object("\\PDF\\PdfImageResult", new PdfImageResult(imageWidth, imageHeight, pageWidth, pageHeight, outFile));
+        const std::string outFile = outputPattern + '-' + std::to_string(index) + '.' + format.getExtension();
+        if (!image.save(outFile, format.getFormat(), resolution)) {
+            throw Php::Exception("Unable to write image: " + outFile);
+        }
+        returnValue[index] = Php::Object("\\PDF\\PdfImageResult",
+            new PdfImageResult(image.width(), image.height(), pageWidth, pageHeight, outFile));
     }
 
     return returnValue;
@@ -345,18 +305,16 @@ Php::Value PdfDocument::compare(Php::Parameters &params) {
     return 0;
 }
 
-PdfImageFormat * PdfDocument::getImageFormat(int inFormat) {
+PdfImageFormat PdfDocument::getImageFormat(int inFormat) {
     switch (inFormat) {
         case 2:
-            return png;
-            break;
+            return PdfImageFormat("png", "png");
         case 3:
-            return tiff;
+            return PdfImageFormat("tiff", "tif");
         default:
         case 1:
-            return jpeg;
+            return PdfImageFormat("jpeg", "jpg");
     }
 
-    return NULL;
 }
 
