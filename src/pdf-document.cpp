@@ -248,56 +248,27 @@ Php::Value PdfDocument::hash(Php::Parameters &params) {
 }
 
 Php::Value PdfDocument::compare(Php::Parameters &params) {
-    PdfDocument *document = (PdfDocument *)params[0].implementation();
-
-    poppler::page *localPage;
-    poppler::page *externalPage;
-    poppler::ustring localPageData;
-    poppler::ustring externalPageData;
-
-    poppler::byte_array localPageText_arr;
-    poppler::byte_array externalPageText_arr;
-
-    char *localPageText_str;
-    char *externalPageText_str;
-
-    int textDifference = 0;
-
-    int count = _document->pages();
+    const auto* document = static_cast<PdfDocument*>(params[0].implementation());
+    const int count = _document->pages();
     if (count != document->_document->pages()) {
         return 10;
     }
 
     for (int pageNum = 0; pageNum < count; ++pageNum) {
-        localPage = _document->create_page(pageNum);
-        if (!localPage) {
-            //Php::warning << "PHP-PDF: Failed to read local page" << pageNum+1 << std::flush;
-
+        const std::unique_ptr<poppler::page> localPage(_document->create_page(pageNum));
+        const std::unique_ptr<poppler::page> externalPage(document->_document->create_page(pageNum));
+        if (!localPage || !externalPage) {
             return -1;
         }
 
-        externalPage = document->_document->create_page(pageNum);
-        if (!externalPage) {
-            //Php::warning << "PHP-PDF: Failed to read " << pageNum+1 << std::flush;
-
-            return -1;
-        }
-
-        localPageData = localPage->text();
-        externalPageData = externalPage->text();
+        const auto localPageData = localPage->text();
+        const auto externalPageData = externalPage->text();
 
         if (localPageData.length() != externalPageData.length()) {
             return 12;
         }
 
-        localPageText_arr = localPageData.to_utf8();
-        localPageText_str = &localPageText_arr[0];
-
-        externalPageText_arr = externalPageData.to_utf8();
-        externalPageText_str = &externalPageText_arr[0];
-
-        textDifference = std::memcmp(localPageText_str, externalPageText_str, localPageData.length());
-        if (textDifference != 0) {
+        if (localPageData.to_utf8() != externalPageData.to_utf8()) {
             return 13;
         }
     }

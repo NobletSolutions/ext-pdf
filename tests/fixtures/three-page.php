@@ -5,7 +5,7 @@ function writeThreePagePdf(string $path, string $prefix = 'Page', bool $withMeta
     $objects = [
         '<< /Type /Catalog /Pages 2 0 R >>',
         '<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>',
-        '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+        '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     ];
 
     foreach (['One', 'Two', 'Three'] as $label) {
