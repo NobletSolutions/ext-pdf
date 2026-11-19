@@ -927,10 +927,6 @@ Php::Value PdfWriter::combine(Php::Parameters &params) {
     return true;
 }
 
-/*
-params[1] is the destination PDF path
-params[0] is an array of PdfCopy commands
-*/
 Php::Value PdfWriter::complexCombine(Php::Parameters &params) {
     std::string destinationFile = params[0].stringValue();
     EStatusCode status;

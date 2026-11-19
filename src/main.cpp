@@ -180,8 +180,8 @@ extern "C" {
         });
  
         pdfWriter.method<&PdfWriter::complexCombine>("complexCombine", Php::Public, {
-            Php::ByVal("documents", Php::Type::Array),
             Php::ByVal("destination", Php::Type::String),
+            Php::ByVal("documents", Php::Type::Array),
         });
 
         Php::Class<PdfImageResult> PdfImageResult("PdfImageResult");

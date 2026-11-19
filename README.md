@@ -2,6 +2,18 @@
 
 Run the PHPT suite locally with `make test`. It builds a fresh extension and uses PHP's `run-tests.php` from the development package. Set `PHP_CONFIG` and, if needed, `PHP` or `RUN_TESTS` to select a different installation.
 
+## PHP API examples
+
+`PdfWriter::complexCombine()` takes the destination path first and an array of `PdfCopy` objects second. Both positional and named calls use the same parameters.
+
+```php
+$documents = [new Pdf\PdfCopy('input.pdf', 1, '2-3')];
+Pdf\PdfWriter::complexCombine('output.pdf', $documents);
+Pdf\PdfWriter::complexCombine(destination: 'output.pdf', documents: $documents);
+```
+
+`new Pdf\PdfDocument($path, $ownerPassword, $userPassword)` takes the owner password second and the user password third. The corresponding PHP parameter names are `user` and `password`. Pass an empty string as the second argument when you only have the user password.
+
 ## AlmaLinux 9 RPM matrix
 
 Run the same source RPM against the existing `alma+epel-9-x86_64-php{83,84,85}.cfg` Mock configs in `/etc/mock`. Use a host with working Mock access.
